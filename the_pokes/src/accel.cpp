@@ -48,7 +48,7 @@ int32_t accel_t::next_plat() {
 
   if(count == steps_to_target) {
     // We're at the midway point, use the time elapsed to determine time remaining
-    t_move_started = micros();
+    t_move_started = now;
     time_to_target = td;
     // Serial.printf("Decelerating. TTT: %lu\n", time_to_target);
     return delay_current;

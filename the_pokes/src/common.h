@@ -27,13 +27,13 @@
 /////////////////////////////////////////
 // Following values are for the *mux* pins
 // Flex sens
-#define SENS_FLEX_1 3
-#define SENS_FLEX_2 2
-#define SENS_FLEX_3 1
+#define SENS_LIM_1 4
+#define SENS_LIM_2 5
+#define SENS_LIM_3 6
+#define SENS_LIM_4 7
 
 // Prox sensors
-#define SENS_TOF_1 4
-#define SENS_PIR_1 5
+#define SENS_PIR_1 3
 /////////////////////////////////////////
 
 // Dip switches

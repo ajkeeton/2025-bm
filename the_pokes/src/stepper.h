@@ -3,12 +3,11 @@
 #include "common.h"
 #include "common/mux.h"
 #include "accel.h"
-#include "flex.h"
 
 #define STEP_LOG_DELAY 1000
-#define DEFAULT_MAX_STEPS 3500
+#define DEFAULT_MAX_STEPS 85000
 
-#define DELAY_MIN 80 // in MICRO seconds
+#define DELAY_MIN 60 // in MICRO seconds
 #define DELAY_MAX 20000 // in MICRO seconds
 
 extern mux_t mux;
@@ -57,6 +56,56 @@ struct step_settings_t {
   float accel = 0.000005;
 };
 
+class limit_state_t {
+public:
+  int val_low = 0, 
+      val_high = 0,
+      pin_low = 0;
+  bool triggered_low = false;
+  uint32_t last_trigger_on = 0;
+
+  // Using "classic" high and low switches
+  void init(int low) {
+    pin_low = low;
+  }
+
+  TRIGGER_STAT check_triggered(int pin, bool &trigger_state) {
+    int ls = mux.read_switch(pin);
+
+    if(trigger_state) {
+      uint32_t now = millis();
+
+    // We were previously triggered
+    // Check if we're no longer
+      if(!ls) {
+        // We're no longer triggered
+        // sort of debounce
+        if(now - last_trigger_on > 10) {
+          trigger_state = false;
+        }
+      }
+      else {
+        last_trigger_on = now;
+      }
+
+      return TRIGGER_WAIT;
+    }
+
+    trigger_state = ls;
+
+    if(trigger_state) {
+      last_trigger_on = millis();
+      return TRIGGER_ON;
+    }
+
+    return TRIGGER_OFF;
+  }
+
+  TRIGGER_STAT check_triggered() {
+    return check_triggered(pin_low, triggered_low);
+  }
+};
+
 class stepper_t {
 public:
   uint16_t idx = 0; // Which stepper this is, used for logging
@@ -68,17 +117,15 @@ public:
   bool forward = true,
        was_on = false;
   int step_pin_val = 0;
-  int how_wiggly = 0; // How much to wiggle when we grab
   
   STEP_STATE state = DEFAULT_MODE;
-             // state_next = DEFAULT_MODE_NEXT;
 
   int pin_step = 0,
       pin_dir = 0,
       pin_enable = 0;
 
-  int val_forward = HIGH,
-      val_backward = LOW;
+  int val_forward = LOW,
+      val_backward = HIGH;
 
   uint32_t last_log = 0;
 
@@ -87,16 +134,15 @@ public:
                   settings_on_wiggle;
 
   accel_t accel;
-  flex_min_max_t flex;
+  limit_state_t limits;
 
-  uint8_t debug_level = LOG_DEBUG;
+  uint8_t debug_level = LOG_INFO;
 
   int pattern = 0; // set by the gardener
   int detangling = 0; // How many times we've tried to detangle
 
   void init(int i, int en, int step, int dir, int lsl, 
             int dmin = DELAY_MIN, int dmax = DELAY_MAX) {
-
     idx = i;
     pin_enable = en;
     pin_step = step;
@@ -113,17 +159,14 @@ public:
     state = DEFAULT_MODE;
 
     accel.init(dmin, dmax);
-    do_init();
-  }
-
-  void do_init() {
+    limits.init(lsl);
     state = STEP_INIT;
-    set_target(DEFAULT_MAX_STEPS*2, settings_on_open);
+    set_target(-pos_end, settings_on_close);
   }
 
   void set_backwards() {
-    val_forward = LOW;
-    val_backward = HIGH;
+    val_forward = HIGH;
+    val_backward = LOW;
   }
 
   void set_onoff(bool onoff) {

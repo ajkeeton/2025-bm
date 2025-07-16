@@ -17,6 +17,17 @@ void stepper_t::dprintf(uint8_t level, const char *format, ...) {
 void stepper_t::choose_next() {
   switch (state) {
       case STEP_INIT:
+          dprintf(LOG_DEBUG, "%d: Init complete\n", idx);
+          position = 0;
+          dprintf(LOG_DEBUG, "%d: Doing next sweep\n", idx);
+          choose_next_sweep();
+          break;
+      case STEP_SWEEP:
+          dprintf(LOG_DEBUG, "%d: Doing next sweep\n", idx);
+          choose_next_sweep();
+          break;
+    #if 0
+      case STEP_INIT:
         state = STEP_CLOSE;
         dprintf(LOG_DEBUG, "Init complete, doing close. Pos: %d, fwd: %d\n", 
             position, forward);
@@ -66,6 +77,7 @@ void stepper_t::choose_next() {
         break;
     default:
       break;
+    #endif
   };
 }
 
@@ -100,6 +112,7 @@ void stepper_t::choose_next_wiggle(int32_t lower, int32_t upper) {
 }
 
 void stepper_t::choose_next_sweep() {
+  state = STEP_SWEEP;
   accel.set_pause_ms(1000);
   
   if (position == pos_end) {
@@ -165,14 +178,12 @@ void stepper_t::run() {
     last_log = now;
 
     dprintf(LOG_DEBUG, "%d: Position: %ld, Target: %ld, State: %d, Fwd/Back: %d, "
-        "Accel Delay: %ld, A0: %f, is ready: %d !(%lu && %lu) Flex %d, At max: %d\n",
+        "Accel Delay: %ld, A0: %f, is ready: %d !(%lu && %lu)\n",
       idx, position, pos_tgt == -INT_MAX ? -99999 : pos_tgt,
       state, forward, 
       accel.delay_current, accel.accel_0, accel.is_ready(),
       us - accel.t_last_update < accel.t_pause_for,
-      us - accel.t_last_update < accel.delay_current,
-      flex.dist_to_max(),
-      flex.at_max());
+      us - accel.t_last_update < accel.delay_current);
   }
 
   if (!accel.is_ready())
@@ -180,13 +191,26 @@ void stepper_t::run() {
 
   set_onoff(STEPPER_ON);
 
-  if(state == STEP_BLOOM || state == STEP_INIT) {
-    //if(flex.dist_to_max() <= 1 && flex.debounced > 3) {
-    if(flex.at_max()) {
-      dprintf(LOG_DEBUG, "%d: At high flex limit (%d)\n", idx, flex.dist_to_max());
-      position = pos_end;
-      pos_tgt = position; // Stop. We'll hold using the delay via choose_next
-    }
+  TRIGGER_STAT ls = limits.check_triggered();
+
+  switch (ls) {
+    case TRIGGER_ON:
+      dprintf(LOG_DEBUG, "%d: At low limit\n", idx);
+      position = 0;
+      set_target(10);
+      break;
+    case TRIGGER_WAIT:
+      // We may technically change modes and back into the LS again
+      // while triggered
+      // Force us to continue moving away from switch even though triggered
+      if (!forward) {
+        // Force us to choose a new direction/mode
+        position = 0;
+        set_target(10);
+      }
+      break;
+    default:
+      break;
   }
 
   if (position != pos_tgt) {

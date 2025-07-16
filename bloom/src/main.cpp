@@ -1,19 +1,18 @@
 #include "common/common.h"
-#include "common/minmax.h"
-#include "common/wifi.h"
 #include "stepper.h"
 #include "leds.h"
+#include "bloom.h"
 
 // IDs:
 // 16B6410F28393B76 [current dev]
 
+bloom_t bloom;
 mux_t mux;
 leds_t leds;
-min_max_range_t minmax(100, 1000); // Default min/max for the sensors
 
 #define NUM_STEPPERS 3
 
-Stepper steppers[NUM_STEPPERS];
+stepper_t steppers[NUM_STEPPERS];
 
 void init_steppers() {
   steppers[0].init(0, STEP_EN_1, STEP_PULSE_1, STEP_DIR_1, 
@@ -26,32 +25,32 @@ void init_steppers() {
   step_settings_t ss;
 
   ss.pause_ms = 10;
-  ss.accel = 0.0001;
-  ss.min_delay = 80;
+  ss.accel = 0.00001;
+  ss.min_delay = 300;
   steppers[0].settings_on_close = ss;
 
   ss.pause_ms = 500;
-  ss.min_delay = 120;
+  ss.min_delay = 400;
   steppers[1].settings_on_close = ss;
 
   ss.pause_ms = 1000;
-  ss.min_delay = 140;
+  ss.min_delay = 500;
   ss.accel = 0.00005;
   steppers[2].settings_on_close = ss;
 
   ss.pause_ms = 1000;
-  ss.accel = 0.00005;
-  ss.min_delay = 80;
+  ss.accel = 0.00001;
+  ss.min_delay = 250;
   steppers[0].settings_on_open = ss;
 
   ss.pause_ms = 500;
-  ss.min_delay = 150;
+  ss.min_delay = 200;
   ss.accel = 0.00001;
   steppers[1].settings_on_open = ss;
 
   ss.pause_ms = 50;
-  ss.min_delay = 300;
-  ss.accel = 0.0001;
+  ss.min_delay = 150;
+  ss.accel = 0.00001;
   steppers[2].settings_on_open = ss;
 
   #if 0
@@ -83,26 +82,26 @@ void init_steppers() {
   steppers[2].settings_on_open = ss;
   #endif
 
-  ss.accel = 0.000002;
+  ss.accel = 0.000001;
   ss.pause_ms = 50;
   ss.min_delay = 750; 
-  ss.max_delay = 10000;
-  ss.min_pos = 200;
-  ss.max_pos = DEFAULT_MAX_STEPS * .1; 
+  ss.max_delay = 20000;
+  ss.min_pos = 0;
+  ss.max_pos = DEFAULT_MAX_STEPS * .15; 
   steppers[0].settings_on_wiggle = ss;
   steppers[1].settings_on_wiggle = ss;
   steppers[2].settings_on_wiggle = ss;
 
-  steppers[0].flex.init(SENS_FLEX_1, 348, 200);
-  steppers[1].flex.init(SENS_FLEX_2, 470, 580);
+  steppers[0].flex.init(SENS_FLEX_1, 0, 200);
+  steppers[1].flex.init(SENS_FLEX_2, 0, 580);
   steppers[1].flex.backwards = true;
-
-// XXX BACKWARDS
-  //steppers[2].flex.init(SENS_FLEX_3, );
+  steppers[2].flex.init(SENS_FLEX_3, 0, 420);
 
   steppers[0].pos_end = DEFAULT_MAX_STEPS * 1.25;
-  steppers[1].pos_end = DEFAULT_MAX_STEPS ;
-  steppers[2].pos_end = DEFAULT_MAX_STEPS * .8;
+  steppers[1].pos_end = DEFAULT_MAX_STEPS;
+  steppers[2].pos_end = DEFAULT_MAX_STEPS * 1.4;
+
+  bloom.add_steppers(steppers[0], steppers[1], steppers[2]);
 }
 
 void init_mode() {
@@ -166,8 +165,9 @@ void setup1() {
   mux.init(8);
   init_steppers();
   init_mode();
+  //bloom.minmax.init_avg(mux.read_raw(SENS_TOF_1));
 
-  minmax.init_avg(mux.read_raw(SENS_TOF_1));
+  bloom.init();
 }
 
 void setup() {
@@ -217,58 +217,21 @@ void log_inputs() {
 
   if(now - last < 750)
     return;
+
   last = now;
 
-  mux.log_info();
-}
-
-bool trigger_bloom() {
-  for(int i=0; i<NUM_STEPPERS; i++)
-    if(steppers[i].state != STEP_WIGGLE)
-        return false;
-
-  for(int i=0; i<NUM_STEPPERS; i++)
-    steppers[i].trigger_bloom();
-
-  return true;
+  //mux.log_info();
 }
 
 void loop1() {
   blink();
   // benchmark();
-
-  mux.next();
-
-  log_inputs();
-
-  // TODO: handle sensor override button 
-  uint32_t sens = mux.read_raw(SENS_TOF_1);
-  uint32_t override = mux.read_raw(0);
-
-  minmax.update(sens);
-
-  // Serial.printf("Sensor: %d, Min: %d, Max: %d\n", sens, minmax.avg_min, minmax.avg_max);
-  // minmax.log_info();
-
-  static uint32_t last = 0;
-  uint32_t now = millis();
-
-  if(override > 512 || minmax.triggered_at(sens)) {
-      if(now > last + 500) {
-        last = now;
-        Serial.printf("Triggered: sens: %ld, override: %ld, (%.2f std: %.2f)\n", 
-                sens, override, minmax.pseudo_avg, minmax.std_dev);
-      }
-
-      trigger_bloom();
-  }
-
-  //for(int i=0; i<2; i++)
-  //  steppers[i].run();
-  steppers[1].run();
+  bloom.next();
 }
 
 void loop() {
+  mux.next();
+  log_inputs();
   leds.background_update();
   leds.step();
 }

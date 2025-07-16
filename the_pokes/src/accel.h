@@ -18,18 +18,10 @@ public:
            delay_max = 0,
            def_default_min = 0,
            def_default_max = 0;
-  /*
-  uint32_t point_to_accel = 0,
-           point_to_decel = 0,
-           point_start = 0;
-  */
 
   uint32_t t_move_started = 0,
            t_last_update = 0,
            t_pause_for = 0; // a pause before we start moving and updating the delay
-
-  //uint32_t accel_val = 1,
-  //         decel_val = 1;
 
   float accel_0 = 0.00001,
         accel_1 = 100;

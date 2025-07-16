@@ -4,6 +4,7 @@
 
 #define FLEX_DEF_MIN 300
 #define FLEX_DEF_MAX 800
+#define FLEX_N_DEBOUNCE 10
 
 extern mux_t mux;
 
@@ -20,7 +21,7 @@ public:
         uint32_t t_now = millis();
         // XXX Value falls as we open! XXX
 
-        if (t_now - t_last_log >= 1000) {
+        if (t_now - t_last_log >= 500) {
             Serial.printf("Flex pin %d cur - max: %d - %d = %d\n", pin, max, cur, cur-max);
             t_last_log  = t_now;
         }
@@ -34,7 +35,7 @@ public:
     bool at_max() {
         int d = dist_to_max();
         if(d < 1) {
-            if(count_debounce++ < 3)
+            if(count_debounce++ < FLEX_N_DEBOUNCE)
                 return false;
             return true;
         } 

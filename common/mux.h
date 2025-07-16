@@ -86,7 +86,6 @@ public:
       vals[idx] = raw;
     }
 
-
     if(++idx >= num_inputs)
       idx = 0;
 
@@ -96,7 +95,7 @@ public:
 
   bool read_switch(int pin) {
     //next();
-    return vals[pin] > 512;
+    return vals[pin] > 400;
   }
 
   uint32_t read_raw(int pin) {
