@@ -3,22 +3,29 @@
 #include "common.h"
 #include "common/mux.h"
 #include "accel.h"
+#include "flex.h"
+#include "bench.h"
 
 #define STEP_LOG_DELAY 1000
-#define DEFAULT_MAX_STEPS 75000
+#define DEFAULT_MAX_STEPS 6000
 
-#define DELAY_MIN 60 // in MICRO seconds
+#define DELAY_MIN 80 // in MICRO seconds
 #define DELAY_MAX 20000 // in MICRO seconds
 
 extern mux_t mux;
 
 enum STEP_STATE {
   STEP_INIT,
+  STEP_WIGGLE_START,
+  STEP_WIGGLE_END,
   STEP_SWEEP,
-  STEP_CLOSE,
-  STEP_WIGGLE,
-  STEP_BLOOM,
-  STEP_BLOOM_WIGGLE,
+  STEP_CLOSE, // Close fingers to test range, confirm direction, etc
+  STEP_OPEN,  // Opposite above, sets '0' based on limit switch
+  STEP_TRIGGERED_INIT, // Open, prepare to grab
+  STEP_GRAB,
+  STEP_GRAB_WIGGLE,
+  STEP_RELAX, // 90%'ish full open stretch
+  STEP_DETANGLE, // reverse a little to help with detangling
 };
 
 enum STEP_PATTERN {
@@ -35,6 +42,7 @@ enum LOG_LEVEL {
 };
 
 #define DEFAULT_MODE STEP_INIT
+#define DEFAULT_MODE_NEXT STEP_SWEEP
 
 #define STEPPER_OFF false
 #define STEPPER_ON true
@@ -53,57 +61,7 @@ struct step_settings_t {
            max_delay = DELAY_MAX,
            min_pos = 0,
            max_pos = 0;
-  float accel = 0.000005;
-};
-
-class limit_state_t {
-public:
-  int val_low = 0, 
-      val_high = 0,
-      pin_low = 0;
-  bool triggered_low = false;
-  uint32_t last_trigger_on = 0;
-
-  // Using "classic" high and low switches
-  void init(int low) {
-    pin_low = low;
-  }
-
-  TRIGGER_STAT check_triggered(int pin, bool &trigger_state) {
-    int ls = mux.read_switch(pin);
-
-    if(trigger_state) {
-      uint32_t now = millis();
-
-    // We were previously triggered
-    // Check if we're no longer
-      if(!ls) {
-        // We're no longer triggered
-        // sort of debounce
-        if(now - last_trigger_on > 10) {
-          trigger_state = false;
-        }
-      }
-      else {
-        last_trigger_on = now;
-      }
-
-      return TRIGGER_WAIT;
-    }
-
-    trigger_state = ls;
-
-    if(trigger_state) {
-      last_trigger_on = millis();
-      return TRIGGER_ON;
-    }
-
-    return TRIGGER_OFF;
-  }
-
-  TRIGGER_STAT check_triggered() {
-    return check_triggered(pin_low, triggered_low);
-  }
+  float accel = 0.00005;
 };
 
 class stepper_t {
@@ -117,15 +75,17 @@ public:
   bool forward = true,
        was_on = false;
   int step_pin_val = 0;
+  int how_wiggly = 0; // How much to wiggle when we grab
   
-  STEP_STATE state = DEFAULT_MODE;
+  STEP_STATE state = DEFAULT_MODE,
+             state_next = DEFAULT_MODE_NEXT;
 
   int pin_step = 0,
       pin_dir = 0,
       pin_enable = 0;
 
-  int val_forward = LOW,
-      val_backward = HIGH;
+  int val_forward = HIGH,
+      val_backward = LOW;
 
   uint32_t last_log = 0;
 
@@ -133,16 +93,17 @@ public:
                   settings_on_open,
                   settings_on_wiggle;
 
+  flex_min_max_t flex;
   accel_t accel;
-  limit_state_t limits;
-
   uint8_t debug_level = LOG_DEBUG;
 
   int pattern = 0; // set by the gardener
-  int detangling = 0; // How many times we've tried to detangle
+
+  bench_t bench;
 
   void init(int i, int en, int step, int dir, int lsl, 
             int dmin = DELAY_MIN, int dmax = DELAY_MAX) {
+
     idx = i;
     pin_enable = en;
     pin_step = step;
@@ -151,22 +112,26 @@ public:
     pinMode(pin_enable, OUTPUT);
     pinMode(pin_step, OUTPUT);
     pinMode(pin_dir, OUTPUT);
-
     set_forward(true);
 
     was_on = true;
     set_onoff(STEPPER_OFF);
-    state = DEFAULT_MODE;
-
     accel.init(dmin, dmax);
-    limits.init(lsl);
+    do_init();
+
+    digitalWrite(pin_enable, HIGH); // Disable by default
+    digitalWrite(pin_step, LOW);
+    digitalWrite(pin_dir, val_forward);
+  }
+
+  void do_init() {
     state = STEP_INIT;
-    set_target(-pos_end, settings_on_close);
+    set_target(-DEFAULT_MAX_STEPS*2, settings_on_open);
   }
 
   void set_backwards() {
-    val_forward = HIGH;
-    val_backward = LOW;
+    val_forward = LOW;
+    val_backward = HIGH;
   }
 
   void set_onoff(bool onoff) {
@@ -186,16 +151,16 @@ public:
   }
 
   void choose_next();
+  void choose_next(STEP_STATE next);
   void choose_next_sweep();
-  void choose_next_rand_walk();
   void choose_next_wiggle();
   void choose_next_wiggle(int32_t lower, int32_t upper);
-  void choose_next_bloom_wiggle();
   void randomize_delay();
   void set_forward(bool f);
   void set_target(int32_t tgt);
   void set_target(int32_t tgt, const step_settings_t &ss);
-  void trigger_bloom();
+  void trigger_close();
   void run();
   void dprintf(uint8_t level, const char *format, ...);
+  void log();
 };

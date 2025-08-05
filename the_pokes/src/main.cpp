@@ -22,42 +22,47 @@ void init_steppers() {
 
   ss.pause_ms = 10;
   ss.accel = 0.00001;
-  ss.min_delay = 120;
+  ss.min_delay = 200;
   steppers[0].settings_on_close = ss;
 
-  ss.pause_ms = 500;
-  ss.min_delay = 120;
+  ss.pause_ms = 50;
+  ss.min_delay = 200;
   steppers[1].settings_on_close = ss;
 
-  ss.pause_ms = 1000;
-  ss.min_delay = 120;
+  ss.pause_ms = 100;
+  ss.min_delay = 200;
   ss.accel = 0.00005;
   steppers[2].settings_on_close = ss;
+  steppers[3].settings_on_close = ss;
 
-  ss.pause_ms = 1000;
+  ss.pause_ms = 100;
   ss.accel = 0.00001;
-  ss.min_delay = 120;
+  ss.min_delay = 200;
   steppers[0].settings_on_open = ss;
 
-  ss.pause_ms = 500;
-  ss.min_delay = 120;
+  ss.pause_ms = 100;
+  ss.min_delay = 200;
   ss.accel = 0.00001;
   steppers[1].settings_on_open = ss;
 
   ss.pause_ms = 50;
-  ss.min_delay = 120;
+  ss.min_delay = 200;
   ss.accel = 0.00001;
   steppers[2].settings_on_open = ss;
+  steppers[3].settings_on_open = ss;
 
   ss.accel = 0.000001;
   ss.pause_ms = 50;
   ss.min_delay = 750; 
   ss.max_delay = 20000;
   ss.min_pos = 0;
+  ss.min_delay = 200;
+
   ss.max_pos = DEFAULT_MAX_STEPS * .15; 
   steppers[0].settings_on_wiggle = ss;
   steppers[1].settings_on_wiggle = ss;
   steppers[2].settings_on_wiggle = ss;
+  steppers[3].settings_on_wiggle = ss;
 }
 
 void wait_serial() {

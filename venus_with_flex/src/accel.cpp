@@ -38,7 +38,7 @@ int32_t accel_t::next_plat() {
   count++;
 
   // total time lapsed since we started moving
-  uint32_t now = micros()/5;
+  uint32_t now = micros();
   
   // Integer overflow will happen here around 70 minutes
   if(t_move_started > now)
@@ -46,9 +46,11 @@ int32_t accel_t::next_plat() {
 
   float td = now - t_move_started;
 
+  td /= 5; // make it more manageable
+
   if(count == steps_to_target) {
     // We're at the midway point, use the time elapsed to determine time remaining
-    t_move_started = now;
+    t_move_started = micros();
     time_to_target = td;
     // Serial.printf("Decelerating. TTT: %lu\n", time_to_target);
     return delay_current;

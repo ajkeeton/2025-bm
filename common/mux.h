@@ -30,7 +30,7 @@ public:
   int num_inputs = 16; // Number of inputs on the mux
   int idx = 0;
   uint32_t last = 0,
-           t_read_delay = 20; // microseconds to settle before next analogRead
+           t_read_delay = 30; // microseconds to settle before next analogRead
 
   int n_avg = 0;
 
@@ -59,6 +59,7 @@ public:
     // Populate all inputs
     do {
         next();
+        delayMicroseconds(t_read_delay);
     } while(idx != 0);
   }
 
@@ -74,6 +75,7 @@ public:
 
   void next() {
     uint32_t now = micros();
+    // Give pin time to settle after switching address
     if(now - last < t_read_delay)
       return;
     last = now;
@@ -94,7 +96,6 @@ public:
   }
 
   bool read_switch(int pin) {
-    //next();
     return vals[pin] > 400;
   }
 
