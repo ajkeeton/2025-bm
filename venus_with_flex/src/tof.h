@@ -1,3 +1,4 @@
+#if 0
 #include "Adafruit_VL53L0X.h"
 #include "Wire.h"
 
@@ -64,3 +65,5 @@ public:
     bool initialized = false;
     uint32_t dist = 0;
 };
+
+#endif

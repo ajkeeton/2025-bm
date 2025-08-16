@@ -3,11 +3,11 @@
 #include "common.h"
 #include "common/mux.h"
 #include "accel.h"
-#include "flex.h"
-#include "bench.h"
+#include "common/hall.h"
+#include "common/bench.h"
 
 #define STEP_LOG_DELAY 1000
-#define DEFAULT_MAX_STEPS 6000
+#define DEFAULT_MAX_STEPS 5000
 
 #define DELAY_MIN 80 // in MICRO seconds
 #define DELAY_MAX 20000 // in MICRO seconds
@@ -33,12 +33,6 @@ enum STEP_PATTERN {
   PATTERN_SUBDUED = 1,
   PATTERN_HIGH_ENERGY = 2,
   PATTERN_SLEEP = 3
-};
-
-enum LOG_LEVEL {
-  LOG_ERROR,
-  LOG_INFO,
-  LOG_DEBUG,
 };
 
 #define DEFAULT_MODE STEP_INIT
@@ -93,9 +87,9 @@ public:
                   settings_on_open,
                   settings_on_wiggle;
 
-  flex_min_max_t flex;
+  hall_t hall;
   accel_t accel;
-  uint8_t debug_level = LOG_DEBUG;
+  uint8_t debug_level = DEFAULT_LOG;
 
   int pattern = 0; // set by the gardener
 
@@ -103,7 +97,6 @@ public:
 
   void init(int i, int en, int step, int dir, int lsl, 
             int dmin = DELAY_MIN, int dmax = DELAY_MAX) {
-
     idx = i;
     pin_enable = en;
     pin_step = step;
@@ -112,16 +105,18 @@ public:
     pinMode(pin_enable, OUTPUT);
     pinMode(pin_step, OUTPUT);
     pinMode(pin_dir, OUTPUT);
+
+    digitalWrite(pin_enable, HIGH); // Disable by default
+    digitalWrite(pin_step, LOW);
+    digitalWrite(pin_dir, val_forward);
+
     set_forward(true);
 
     was_on = true;
     set_onoff(STEPPER_OFF);
     accel.init(dmin, dmax);
+    hall.init(lsl);
     do_init();
-
-    digitalWrite(pin_enable, HIGH); // Disable by default
-    digitalWrite(pin_step, LOW);
-    digitalWrite(pin_dir, val_forward);
   }
 
   void do_init() {

@@ -3,12 +3,16 @@
 #include "common/wifi.h"
 #include "stepper.h"
 #include "leds.h"
-#include "tof.h"
+#include "hall.h"
+
+bool setup0_done = false;
+bool use_tof = false;
 
 mux_t mux;
 wifi_t wifi;
 leds_t leds;
-tof_t tof;
+hall_t hall;
+
 min_max_range_t minmax(100, 1000); // Default min/max for the sensors
 
 #define NUM_STEPPERS 3
@@ -67,26 +71,24 @@ void init_steppers() {
 
   if(analogRead(INPUT_SWITCH_0) < 100) {
     Serial.printf("Pod 1\n");
+    use_tof = true;
 
-    steppers[0].flex.init(SENS_FLEX_3, 330, 570);
-    steppers[1].flex.init(SENS_FLEX_2, 330, 570);
-    steppers[2].set_backwards();
-    steppers[2].flex.init(SENS_FLEX_1, 340, 570);
+    //steppers[0].set_backwards();
   }
   else if (analogRead(INPUT_SWITCH_1) < 100) {
     // For limb C only!
     Serial.printf("Pod 3\n");
     steppers[1].set_backwards();
     steppers[2].set_backwards();
-    steppers[0].flex.init(SENS_FLEX_1, 330, 570);
-    steppers[1].flex.init(SENS_FLEX_2, 330, 570);
-    steppers[2].flex.init(SENS_FLEX_3, 330, 570);
+    // Avoid a power surge from all starting at once
+    delay(1000);
   }
   else {
     Serial.printf("Pod 2\n");
-    steppers[0].flex.init(SENS_FLEX_1, 330, 570);
-    steppers[1].flex.init(SENS_FLEX_2, 330, 570);
-    steppers[2].flex.init(SENS_FLEX_3, 330, 570);
+    steppers[1].set_backwards();
+
+    // Avoid a power surge from all starting at once
+    delay(500);
   }
 }
 
@@ -130,16 +132,10 @@ void init_mode() {
     // steppers[i].state_next = mode; //  DEFAULT_MODE_NEXT; // STEP_SWEEP; // STEP_WIGGLE_START;
   }
 }
-void wait_serial() {
-  uint32_t now = millis();
-
-  // Wait up to 2 seconds for serial
-  while(!Serial && millis() - now < 2000) {
-    delay(100);
-  }  
-}
 
 void setup1() {
+  while(!setup0_done) { yield(); }
+
   Serial.begin(9600);
   wait_serial();
 
@@ -166,26 +162,27 @@ void setup1() {
 
   Serial.println("Starting...");
 
-  mux.init();
   //mux.num_inputs = 6;
   init_steppers();
   init_mode();
-  leds.init();
 
   minmax.init_avg(mux.read_raw(SENS_PROX_1));
 }
 
 void setup() {
+  mux.init();
+  leds.init();
+
   wait_serial();
 
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
   pinMode(A2, INPUT);
 
-  tof.init();
-
   //wifi.init("venus");
   Serial.print("Chip ID: "); Serial.println(rp2040.getChipID());
+
+  setup0_done = true;
 }
 
 void benchmark() {
@@ -222,6 +219,12 @@ void log_inputs() {
   last = now;
 
   mux.log_info();
+
+  if(use_tof) {
+    uint16_t tof = constrain(map(mux.read_raw(SENS_TOF_PIN), SENS_TOF_MIN, SENS_TOF_MAX, 30, 4), 4, 30);
+    // To inches
+    Serial.printf("ToF: %d, %.3f in\n", mux.read_raw(SENS_TOF_PIN), (float)tof*0.393701);
+  }
 }
 
 void loop1() {
@@ -229,6 +232,11 @@ void loop1() {
   // benchmark();
 
   log_inputs();
+
+  EVERY_N_MILLISECONDS(100) {
+    // Current sensor is 4 to 30 cm
+
+  }
 
   #ifdef SENS_LOG_ONLY
   return;
@@ -257,39 +265,11 @@ void loop1() {
 
   for(int i=0; i<NUM_STEPPERS; i++)
     steppers[i].run();
-  
-  // Move cores?
-  leds.background_update();
-  leds.step();
 }
 
 void loop() {
   mux.next();
-  tof.next();
-
-  /* 
-  wifi.next();
-  
-  recv_msg_t msg;
-  while(wifi.recv_pop(msg)) {
-      switch(msg.type) {
-          case PROTO_PULSE:
-              Serial.printf("The gardener told us to pulse: %u %u %u %u\n", 
-                  msg.pulse.color, msg.pulse.fade, msg.pulse.spread, msg.pulse.delay);
-              break;
-          case PROTO_STATE_UPDATE:
-              Serial.printf("State update: %u %u\n", 
-                      msg.state.pattern_idx, msg.state.score);
-              break;
-          case PROTO_PIR_TRIGGERED:
-              Serial.println("A PIR sensor was triggered");
-              break;
-          case PROTO_SLEEPY_TIME:
-              Serial.println("Received sleepy time message");
-              break;
-          default:
-              Serial.printf("Ignoring message type: %u\n", msg.type);
-      }
-  }
-  */
+  // Move cores?
+  leds.background_update();
+  leds.step();
 }

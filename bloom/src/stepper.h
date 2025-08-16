@@ -3,10 +3,10 @@
 #include "common.h"
 #include "common/mux.h"
 #include "accel.h"
-#include "flex.h"
+#include "common/hall.h"
 
 #define STEP_LOG_DELAY 1000
-#define DEFAULT_MAX_STEPS 3500
+#define DEFAULT_MAX_STEPS 4500
 
 #define DELAY_MIN 80 // in MICRO seconds
 #define DELAY_MAX 20000 // in MICRO seconds
@@ -20,6 +20,9 @@ enum STEP_STATE {
   STEP_WIGGLE,
   STEP_BLOOM,
   STEP_BLOOM_WIGGLE,
+  STEP_BLOOM_2, // For the petals
+
+  STEP_WAIT
 };
 
 enum STEP_PATTERN {
@@ -29,18 +32,10 @@ enum STEP_PATTERN {
   PATTERN_SLEEP = 3
 };
 
-enum LOG_LEVEL {
-  LOG_ERROR,
-  LOG_INFO,
-  LOG_DEBUG,
-};
-
 #define DEFAULT_MODE STEP_INIT
 
 #define STEPPER_OFF false
 #define STEPPER_ON true
-
-#define MAX_DETANGLE_TRIES 4
 
 enum TRIGGER_STAT {
     TRIGGER_OFF,
@@ -87,16 +82,15 @@ public:
                   settings_on_wiggle;
 
   accel_t accel;
-  flex_min_max_t flex;
+  hall_t hall;
 
-  uint8_t debug_level = LOG_DEBUG;
+  uint8_t debug_level = DEF_LOG;
 
   int pattern = 0; // set by the gardener
   int detangling = 0; // How many times we've tried to detangle
 
   void init(int i, int en, int step, int dir, int lsl, 
             int dmin = DELAY_MIN, int dmax = DELAY_MAX) {
-
     idx = i;
     pin_enable = en;
     pin_step = step;
@@ -106,19 +100,19 @@ public:
     pinMode(pin_step, OUTPUT);
     pinMode(pin_dir, OUTPUT);
 
-    set_forward(true);
+    digitalWrite(pin_enable, HIGH); // Disable by default
+    digitalWrite(pin_step, LOW);
 
     was_on = true;
     set_onoff(STEPPER_OFF);
-    state = DEFAULT_MODE;
-
     accel.init(dmin, dmax);
-    do_init();
+    hall.init(lsl);
   }
 
   void do_init() {
     state = STEP_INIT;
-    set_target(DEFAULT_MAX_STEPS*2, settings_on_open);
+    set_forward(false);
+    set_target(-DEFAULT_MAX_STEPS*2, settings_on_open);
   }
 
   void set_backwards() {
@@ -155,4 +149,5 @@ public:
   void trigger_bloom();
   void run();
   void dprintf(uint8_t level, const char *format, ...);
+  void log();
 };

@@ -1,3 +1,6 @@
+// Switching to hall sensors
+#ifdef 0
+
 #pragma once
 #include <stdint.h>
 #include "common/mux.h"
@@ -52,3 +55,5 @@ public:
     int count_debounce = 0;
     bool backwards = false;
 };
+
+#endif

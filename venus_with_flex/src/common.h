@@ -3,7 +3,16 @@
 #include <Wire.h>
 #include <stdint.h>
 
-// #define SENS_LOG_ONLY
+//#define SENS_LOG_ONLY
+//#define OPEN_CLOSE_ONLY
+
+enum LOG_LEVEL {
+  LOG_ERROR,
+  LOG_INFO,
+  LOG_DEBUG,
+};
+
+#define DEFAULT_LOG LOG_DEBUG
 
 #define DEF_SENS_THOLD 800
 
@@ -56,3 +65,9 @@
 // Dip switches
 #define INPUT_SWITCH_0 A1
 #define INPUT_SWITCH_1 A2
+
+// ToF / Lidar ranges with current mux & v div
+// ~.75 to 5.5 inches
+#define SENS_TOF_MIN 15
+#define SENS_TOF_MAX 130
+#define SENS_TOF_PIN 3

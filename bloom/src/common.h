@@ -3,6 +3,18 @@
 #include <Wire.h>
 #include <stdint.h>
 
+//#define SENS_LOG_ONLY
+//#define OPEN_CLOSE_ONLY
+#define SWEEP_ONLY
+
+enum LOG_LEVEL {
+  LOG_ERROR,
+  LOG_INFO,
+  LOG_DEBUG,
+};
+
+#define DEF_LOG LOG_DEBUG
+
 #define DEF_SENS_THOLD 800
 
 #define STEP_EN_1 2
@@ -27,13 +39,13 @@
 /////////////////////////////////////////
 // Following values are for the *mux* pins
 // Flex sens
-#define SENS_FLEX_1 3
-#define SENS_FLEX_2 2
-#define SENS_FLEX_3 1
+#define SENS_LIMIT_1 7
+#define SENS_LIMIT_2 6
+#define SENS_LIMIT_3 5
 
 // Prox sensors
 #define SENS_TOF_1 4
-#define SENS_PIR_1 5
+#define SENS_PIR_1 2
 /////////////////////////////////////////
 
 // Dip switches

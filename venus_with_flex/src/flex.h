@@ -1,3 +1,5 @@
+#if 0
+
 #pragma once
 #include <stdint.h>
 #include "common/mux.h"
@@ -112,3 +114,5 @@ public:
     uint64_t avg = 0;
     bool backwards = false;
 };
+
+#endif

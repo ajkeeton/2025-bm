@@ -33,6 +33,9 @@ public:
     void do_close(stepper_t &s);
     void do_close();
 
+    bool in_init();
+    bool is_blooming();
+
     BLOOM_STATE_T state = BLOOM_INIT;
     stepper_t *inner = nullptr,
               *middle = nullptr,

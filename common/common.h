@@ -6,6 +6,7 @@
 #define LOG_TIMEOUT 500 // in ms
 
 void blink();
+void wait_serial();
 
 struct log_throttle_t {
   uint32_t last = 0;

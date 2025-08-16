@@ -17,13 +17,15 @@ void stepper_t::dprintf(uint8_t level, const char *format, ...) {
 void stepper_t::choose_next() {
   switch (state) {
       case STEP_INIT:
-        state = STEP_CLOSE;
-        dprintf(LOG_DEBUG, "Init complete, doing close. Pos: %d, fwd: %d\n", 
-            position, forward);
-        set_target(0, settings_on_close);
+        state = STEP_WAIT;
+        set_onoff(STEPPER_OFF);
+        
+        #if 0
+        dprintf(LOG_DEBUG, "%d: Init complete, doing bloom. Positions: %d -> %d,\n", 
+            idx, position, pos_end);
+        set_target(pos_end, settings_on_open);
         accel.set_pause_ms(500);
-        dprintf(LOG_DEBUG, "%d: Close next target: %d, fwd: %d\n", 
-          idx, pos_tgt, forward);
+        #endif
         break;
       case STEP_SWEEP:
         dprintf(LOG_DEBUG, "%d: Doing next sweep\n", idx);
@@ -31,25 +33,9 @@ void stepper_t::choose_next() {
         break;
       case STEP_CLOSE:
         // Special case, need to get away from the limit before changing direction
-        
-        if(flex.dist_to_max() < 1) {
-          position += 250;
-          accel.set_pause_ms(500);
-          dprintf(LOG_DEBUG, "%d: Closed but currently past limit. "
-              "Backing off, pos: %d, tgt: %d, fwd: %d\n", 
-              idx, position, pos_tgt, forward);
-        }
-        else 
-        {
-          dprintf(LOG_DEBUG, "%d: Closed @ %d. Doing init. fwd: %d\n", idx, position, forward);
-
-          // TODO: random wiggle or just wait
-          choose_next_wiggle();
-          //set_onoff(STEPPER_OFF);
-
-          dprintf(LOG_DEBUG, "%d: Init next target: %d, fwd: %d\n", idx, pos_tgt, forward);
-        }
-
+        dprintf(LOG_DEBUG, "%d: Close complete @ %d. Doing wiggle. fwd: %d\n", idx, position, forward);
+        // TODO: random wiggle or just wait
+        choose_next_wiggle();
         break;
       case STEP_WIGGLE:
         choose_next_wiggle();
@@ -58,11 +44,17 @@ void stepper_t::choose_next() {
         choose_next_bloom_wiggle();
         break;
       case STEP_BLOOM:
+        #ifdef SWEEP_ONLY
+        state = STEP_INIT;
+        set_target(0, settings_on_open);
+        dprintf(LOG_DEBUG, "%d: Bloom complete, sweeping\n", idx);
+        #else
         state = STEP_BLOOM_WIGGLE;
         dprintf(LOG_DEBUG, "%d: Bloom complete, doing wiggle\n", idx);
         // TODO: random wait or wiggle
         accel.set_pause_ms(1000);
         choose_next_bloom_wiggle();
+        #endif
         break;
     default:
       break;
@@ -160,26 +152,26 @@ void stepper_t::set_target(int32_t tgt, const step_settings_t &ss) {
 void stepper_t::run() {
   uint32_t now = millis();
   
-  if (debug_level >= LOG_DEBUG && now - last_log > 1000) {
-    uint32_t us = micros();
-    last_log = now;
-
-    dprintf(LOG_DEBUG, "%d: Position: %ld, Target: %ld, State: %d, Fwd/Back: %d, "
-        "Accel Delay: %ld, A0: %f, is ready: %d !(%lu && %lu) Flex %d, At max: %d\n",
-      idx, position, pos_tgt == -INT_MAX ? -99999 : pos_tgt,
-      state, forward, 
-      accel.delay_current, accel.accel_0, accel.is_ready(),
-      us - accel.t_last_update < accel.t_pause_for,
-      us - accel.t_last_update < accel.delay_current,
-      flex.dist_to_max(),
-      flex.at_max());
-  }
+  log();
 
   if (!accel.is_ready())
     return;
 
   set_onoff(STEPPER_ON);
 
+  if(state == STEP_INIT || state == STEP_CLOSE) {
+    //if(flex.dist_to_max() <= 1 && flex.debounced > 3) {
+    // XXX The check for forward probably doesn't work when the sensor is backwards
+    if(hall.is_triggered() && !forward && position != pos_tgt) {
+      dprintf(LOG_DEBUG, "%d: Hall triggered. Pos: %d\n", 
+          idx, position);
+      position = 0;
+      pos_tgt = position; // Stop. We'll hold using the delay via choose_next
+      //delay(500);
+    } 
+  }
+
+  #if 0
   if(state == STEP_BLOOM || state == STEP_INIT) {
     //if(flex.dist_to_max() <= 1 && flex.debounced > 3) {
     if(flex.at_max()) {
@@ -188,6 +180,7 @@ void stepper_t::run() {
       pos_tgt = position; // Stop. We'll hold using the delay via choose_next
     }
   }
+  #endif
 
   if (position != pos_tgt) {
     if (forward)
@@ -212,9 +205,33 @@ void stepper_t::trigger_bloom() {
   if(state == STEP_BLOOM || state == STEP_BLOOM_WIGGLE)
     return;
     
-//  if(state != STEP_WIGGLE)
-//    return;
-
   state = STEP_BLOOM;
   set_target(pos_end, settings_on_open);
+}
+
+void stepper_t::log() {
+  uint32_t now = millis();
+  if (debug_level >= LOG_DEBUG && now - last_log > 1000) {
+    uint32_t us = micros();
+    last_log = now;
+
+    const char* state_str = nullptr;
+    switch (state) {
+      case STEP_INIT: state_str = "init"; break;
+      case STEP_BLOOM: state_str = "bloom"; break;
+      case STEP_BLOOM_WIGGLE: state_str = "bloom_wiggle"; break;
+      case STEP_WIGGLE: state_str = "wiggle"; break;
+      case STEP_CLOSE: state_str = "close"; break;
+      case STEP_SWEEP: state_str = "sweep"; break;
+      default: state_str = "unknown"; break;
+    }
+
+    dprintf(LOG_DEBUG, "%d: Position: %ld, Target: %ld, State: %s, Fwd/Back: %d, "
+        "Accel Delay: %ld, A0: %f, is ready: %d !(%lu && %lu)\n",
+      idx, position, pos_tgt == -INT_MAX ? -99999 : pos_tgt,
+      state_str, forward, 
+      accel.delay_current, accel.accel_0, accel.is_ready(),
+      us - accel.t_last_update < accel.t_pause_for,
+      us - accel.t_last_update < accel.delay_current);
+  }
 }

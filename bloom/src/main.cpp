@@ -16,12 +16,12 @@ stepper_t steppers[NUM_STEPPERS];
 
 void init_steppers() {
   steppers[0].init(0, STEP_EN_1, STEP_PULSE_1, STEP_DIR_1, 
-                   SENS_FLEX_1, DELAY_MIN, DELAY_MAX);
+                   SENS_LIMIT_1, DELAY_MIN, DELAY_MAX);
   steppers[1].init(1, STEP_EN_2, STEP_PULSE_2, STEP_DIR_2, 
-                   SENS_FLEX_2, DELAY_MIN, DELAY_MAX);
+                   SENS_LIMIT_2, DELAY_MIN, DELAY_MAX);
   steppers[2].init(2, STEP_EN_3, STEP_PULSE_3, STEP_DIR_3, 
-                   SENS_FLEX_3, DELAY_MIN, DELAY_MAX);
- 
+                   SENS_LIMIT_3, DELAY_MIN, DELAY_MAX);
+
   step_settings_t ss;
 
   ss.pause_ms = 10;
@@ -82,24 +82,22 @@ void init_steppers() {
   steppers[2].settings_on_open = ss;
   #endif
 
-  ss.accel = 0.000001;
+  ss.accel = 0.000002;
   ss.pause_ms = 50;
-  ss.min_delay = 750; 
+  ss.min_delay = 500; 
   ss.max_delay = 20000;
   ss.min_pos = 0;
-  ss.max_pos = DEFAULT_MAX_STEPS * .15; 
+  ss.max_pos = DEFAULT_MAX_STEPS * .1;
   steppers[0].settings_on_wiggle = ss;
   steppers[1].settings_on_wiggle = ss;
   steppers[2].settings_on_wiggle = ss;
 
-  steppers[0].flex.init(SENS_FLEX_1, 0, 200);
-  steppers[1].flex.init(SENS_FLEX_2, 0, 580);
-  steppers[1].flex.backwards = true;
-  steppers[2].flex.init(SENS_FLEX_3, 0, 420);
-
   steppers[0].pos_end = DEFAULT_MAX_STEPS * 1.25;
   steppers[1].pos_end = DEFAULT_MAX_STEPS;
   steppers[2].pos_end = DEFAULT_MAX_STEPS * 1.4;
+
+  steppers[0].set_backwards();
+  steppers[2].set_backwards();
 
   bloom.add_steppers(steppers[0], steppers[1], steppers[2]);
 }
@@ -143,15 +141,6 @@ void init_mode() {
     steppers[i].choose_next(); // necessary to initialize targets, speeds, etc
   }
   #endif
-}
-
-void wait_serial() {
-  uint32_t now = millis();
-
-  // Wait up to 2 seconds for serial
-  while(!Serial && millis() - now < 2000) {
-    delay(100);
-  }  
 }
 
 void setup1() {
@@ -220,12 +209,17 @@ void log_inputs() {
 
   last = now;
 
-  //mux.log_info();
+  mux.log_info();
 }
 
 void loop1() {
   blink();
   // benchmark();
+      
+  #ifdef SENS_LOG_ONLY
+  return;
+  #endif
+
   bloom.next();
 }
 

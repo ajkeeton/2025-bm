@@ -13,3 +13,12 @@ void blink() {
     onoff = !onoff;
     digitalWrite(LED_BUILTIN, onoff);
 }
+
+void wait_serial() {
+  uint32_t now = millis();
+
+  // Wait up to 2 seconds for serial
+  while(!Serial && millis() - now < 2000) {
+    delay(100);
+  }  
+}

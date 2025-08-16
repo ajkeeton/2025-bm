@@ -30,6 +30,9 @@ void stepper_t::choose_next(STEP_STATE next) {
 
       dprintf(LOG_DEBUG, "%d: Initializing\n", idx);
       set_target(-DEFAULT_MAX_STEPS);
+
+      // Override max speed to avoid slamming into the limit
+      accel.delay_min = max(accel.delay_min, 200);
       accel.accel_0 = 0.00015;
       break;
     case STEP_WIGGLE_START:
@@ -62,8 +65,11 @@ void stepper_t::choose_next(STEP_STATE next) {
       set_target(-DEFAULT_MAX_STEPS, settings_on_open);  // Force us to find the lower limit
       accel.set_pause_ms(250);
       dprintf(LOG_DEBUG, "%d: Doing open\n", idx);
+      #ifdef OPEN_CLOSE_ONLY
+      state_next = STEP_CLOSE;
+      #else
       state_next = STEP_RELAX;
-      //state_next = STEP_CLOSE;
+      #endif
       break;
     case STEP_RELAX:
       state_next = STEP_WIGGLE_START;
@@ -197,9 +203,9 @@ void stepper_t::run() {
   if(state == STEP_INIT || state == STEP_OPEN) {
     //if(flex.dist_to_max() <= 1 && flex.debounced > 3) {
     // XXX The check for forward probably doesn't work when the sensor is backwards
-    if(flex.at_min() && !forward && position != pos_tgt) {
-      dprintf(LOG_DEBUG, "%d: At low flex limit. Pos: %d. Dist: %d\n", 
-          idx, position, flex.dist_to_min());
+    if(hall.is_triggered() && !forward && position != pos_tgt) {
+      dprintf(LOG_DEBUG, "%d: Hall triggered. Pos: %d\n", 
+          idx, position);
       position = 0;
       pos_tgt = position; // Stop. We'll hold using the delay via choose_next
       //delay(500);
@@ -208,16 +214,6 @@ void stepper_t::run() {
 
   if (!accel.is_ready())
     return;
-
-  if(flex.is_zero()) {
-    dprintf(LOG_DEBUG, "%d: Flex sensor now powered (raw: %d). Stopping\n", idx,
-       mux.read_raw(flex.pin));
-    position = 0;
-    pos_tgt = position; // Stop. We'll hold using the delay via choose_next
-    // set_onoff(STEPPER_OFF);
-    accel.set_pause_ms(1000);
-    return;
-  }
 
   set_onoff(STEPPER_ON);
 
