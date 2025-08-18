@@ -82,13 +82,13 @@ void bloom_t::init_stepper(stepper_t &s) {
 bool bloom_t::in_init() {
     return (inner->state == STEP_INIT ||
             middle->state == STEP_INIT ||
-            outer->state == STEP_INIT);
+            (!outer->disable && outer->state == STEP_INIT));
 }
 
 bool bloom_t::is_blooming() {
     return (inner->state == STEP_BLOOM ||
             middle->state == STEP_BLOOM ||
-            outer->state == STEP_BLOOM);
+            (!outer->disable && outer->state == STEP_BLOOM));
 }
 
 void bloom_t::init() {

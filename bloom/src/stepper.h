@@ -6,7 +6,12 @@
 #include "common/hall.h"
 
 #define STEP_LOG_DELAY 1000
+
+#ifdef BLOOM_A
 #define DEFAULT_MAX_STEPS 4500
+#else
+#define DEFAULT_MAX_STEPS 11000
+#endif
 
 #define DELAY_MIN 80 // in MICRO seconds
 #define DELAY_MAX 20000 // in MICRO seconds
@@ -88,6 +93,8 @@ public:
 
   int pattern = 0; // set by the gardener
   int detangling = 0; // How many times we've tried to detangle
+
+  bool disable = false;
 
   void init(int i, int en, int step, int dir, int lsl, 
             int dmin = DELAY_MIN, int dmax = DELAY_MAX) {

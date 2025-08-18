@@ -150,11 +150,14 @@ void stepper_t::set_target(int32_t tgt, const step_settings_t &ss) {
 }
 
 void stepper_t::run() {
+  if(disable)
+    return;
+    
   uint32_t now = millis();
   
   log();
 
-  if (!accel.is_ready())
+  if(!accel.is_ready())
     return;
 
   set_onoff(STEPPER_ON);

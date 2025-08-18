@@ -11,7 +11,6 @@ mux_t mux;
 // leds_t leds;
 
 #define NUM_STEPPERS 3
-
 stepper_t steppers[NUM_STEPPERS];
 
 void init_steppers() {
@@ -19,10 +18,12 @@ void init_steppers() {
                    SENS_LIMIT_1, DELAY_MIN, DELAY_MAX);
   steppers[1].init(1, STEP_EN_2, STEP_PULSE_2, STEP_DIR_2, 
                    SENS_LIMIT_2, DELAY_MIN, DELAY_MAX);
-  steppers[2].init(2, STEP_EN_3, STEP_PULSE_3, STEP_DIR_3, 
-                   SENS_LIMIT_3, DELAY_MIN, DELAY_MAX);
 
   step_settings_t ss;
+
+  #ifdef BLOOM_A
+  steppers[2].init(2, STEP_EN_3, STEP_PULSE_3, STEP_DIR_3, 
+                   SENS_LIMIT_3, DELAY_MIN, DELAY_MAX);
 
   ss.pause_ms = 10;
   ss.accel = 0.00001;
@@ -53,35 +54,6 @@ void init_steppers() {
   ss.accel = 0.00001;
   steppers[2].settings_on_open = ss;
 
-  #if 0
-  ss.pause_ms = 10;
-  ss.accel = 0.0001;
-  ss.min_delay = 80;
-  steppers[0].settings_on_close = ss;
-  
-  ss.pause_ms = 10;
-  steppers[1].settings_on_close = ss;
-
-  // Wait to close
-  ss.accel = 0.000025;
-  ss.pause_ms = 300;
-  ss.min_delay = 100;
-  steppers[2].settings_on_close = ss;
-
-  // Open slower
-  ss.pause_ms = 250;
-  ss.min_delay = 150;
-  ss.accel = 0.000015;
-  steppers[0].settings_on_open = ss;
-  steppers[1].settings_on_close = ss;
-
-  // Open faster than the others
-  ss.pause_ms = 10;
-  ss.min_delay = 50;
-  ss.accel = 0.00015;
-  steppers[2].settings_on_open = ss;
-  #endif
-
   ss.accel = 0.000002;
   ss.pause_ms = 50;
   ss.min_delay = 500; 
@@ -98,6 +70,43 @@ void init_steppers() {
 
   steppers[0].set_backwards();
   steppers[2].set_backwards();
+#else
+  steppers[1].set_backwards();
+
+  // Bloom B - The long petals
+  steppers[2].disable = true; // No 3rd stepper on Bloom B
+
+  ss.pause_ms = 10;
+  ss.accel = 0.00001;
+  ss.min_delay = 300;
+  steppers[0].settings_on_close = ss;
+
+  ss.pause_ms = 500;
+  ss.min_delay = 400;
+  steppers[1].settings_on_close = ss;
+
+  ss.pause_ms = 1000;
+  ss.accel = 0.00001;
+  ss.min_delay = 250;
+  steppers[0].settings_on_open = ss;
+
+  ss.pause_ms = 500;
+  ss.min_delay = 200;
+  ss.accel = 0.00001;
+  steppers[1].settings_on_open = ss;
+
+  ss.accel = 0.0000015;
+  ss.pause_ms = 50;
+  ss.min_delay = 600; 
+  ss.max_delay = 20000;
+  ss.min_pos = 0;
+  ss.max_pos = DEFAULT_MAX_STEPS * .25;
+  steppers[0].settings_on_wiggle = ss;
+  steppers[1].settings_on_wiggle = ss;
+
+  steppers[0].pos_end = DEFAULT_MAX_STEPS;
+  steppers[1].pos_end = DEFAULT_MAX_STEPS;
+#endif
 
   bloom.add_steppers(steppers[0], steppers[1], steppers[2]);
 }

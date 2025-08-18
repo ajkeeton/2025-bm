@@ -3,7 +3,7 @@
 #include <Wire.h>
 #include <stdint.h>
 
-//#define SENS_LOG_ONLY
+// #define SENS_LOG_ONLY
 //#define OPEN_CLOSE_ONLY
 // #define SWEEP_ONLY
 

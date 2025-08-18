@@ -23,6 +23,11 @@ public:
         outer = &s3;
     }
 
+    void add_steppers(stepper_t &s1, stepper_t &s2) {
+        inner = &s1;
+        outer = &s2;
+    }
+
     void next();
     bool do_bloom(stepper_t &s);
     void do_bloom();
