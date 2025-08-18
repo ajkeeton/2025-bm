@@ -223,6 +223,7 @@ void stepper_t::log() {
       case STEP_WIGGLE: state_str = "wiggle"; break;
       case STEP_CLOSE: state_str = "close"; break;
       case STEP_SWEEP: state_str = "sweep"; break;
+      case STEP_WAIT: state_str = "wait"; break;
       default: state_str = "unknown"; break;
     }
 

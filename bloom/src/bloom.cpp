@@ -3,11 +3,40 @@
 #include "bloom.h"
 
 void bloom_t::next() {
+    uint32_t now = millis();
+
+    int remote = mux.read_raw(SENS_REMOTE_1);
+    if(remote > 120) {
+        // If we just closed, wait a bit before re-opening
+        if(t_last_close != 0 && now - t_last_close < 3000) {
+            Serial.printf("Ignoring remote input, just closed %lu ms ago\n", now - t_last_close);
+        }
+        else {
+            //Serial.printf("Remote triggering bloom\n");
+            do_bloom();
+        }
+    }
+    else {
+        if(t_last_activity && now - t_last_activity > 15000) {
+            Serial.printf("No activity for %lu ms, ending bloom\n", now - t_last_activity);
+            end_bloom();
+            t_last_bloom = t_last_activity = 0;
+            t_last_close = now;
+        }
+
+        // Automatically re-bloom after some time
+        if(t_last_close && now - t_last_close > 10*60000) {
+            Serial.printf("Auto re-blooming after %lu ms since close\n", now - t_last_close);
+            do_bloom();
+        }
+    }
+
+    #if 0
     uint32_t sens = mux.read_raw(SENS_TOF_1);
     uint32_t override = mux.read_raw(SENS_PIR_1);
 
     minmax.update(sens);
-
+    
     // Serial.printf("Sensor: %d, Min: %d, Max: %d\n", sens, minmax.avg_min, minmax.avg_max);
     // minmax.log_info();
 
@@ -27,6 +56,7 @@ void bloom_t::next() {
         Serial.printf("Bloom timeout. Ending after %lu ms\n", now - t_last_bloom);
         end_bloom();
     }
+    #endif
 
     inner->run();
     middle->run();
@@ -104,6 +134,7 @@ void bloom_t::do_close(stepper_t &s) {
 
 bool bloom_t::do_bloom(stepper_t &s) {
     s.trigger_bloom();
+
     #if 0
     uint32_t t_start = millis();
     while(s.state == STEP_BLOOM) {
@@ -123,6 +154,12 @@ bool bloom_t::do_bloom(stepper_t &s) {
 }
 
 void bloom_t::do_bloom() {
+    t_last_activity = millis();
+    t_last_close = 0;
+
+    if(state == BLOOM)
+        return;
+
     t_last_bloom = millis();
     state = BLOOM;
 
@@ -152,3 +189,10 @@ void bloom_t::do_wiggle() {
     do_wiggle(outer);
 }
 #endif
+
+void bloom_t::check_activity() {
+    int remote = mux.read_raw(SENS_REMOTE_1);
+    if(remote > 200) {
+        t_last_activity = millis();
+    }
+}

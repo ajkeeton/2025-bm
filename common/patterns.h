@@ -24,13 +24,12 @@ struct rainbow_t {
   }
 
   CRGB get(uint16_t i, uint8_t brightness) {
-    if(brightness) {
-      CHSV hsv = rgb2hsv_approximate(leds[i]);
-      hsv.value = brightness;
-      return hsv;
-    }
-
-    return leds[i];
+      //CHSV hsv = rgb2hsv_approximate(leds[i]);
+      //hsv.value = brightness;
+      //return hsv;
+      CRGB temp = leds[i];
+      temp.nscale8_video(255-brightness);
+      return temp;
   }
 
   void update();
@@ -234,8 +233,9 @@ struct tracer_t {
     return npos;
   }
 
-  void step();
   void step(uint16_t activity);
+private:
+  void step();
 };
 
 struct animate_waves_t {

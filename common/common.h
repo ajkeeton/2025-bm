@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <stdint.h>
 
+#include "common/common.h"
+
 #define BLINK_DELAY 750 // ms
 #define LOG_TIMEOUT 500 // in ms
 

@@ -1,6 +1,6 @@
 #include "common/common.h"
 #include "stepper.h"
-#include "leds.h"
+//#include "leds.h"
 #include "bloom.h"
 
 // IDs:
@@ -8,7 +8,7 @@
 
 bloom_t bloom;
 mux_t mux;
-leds_t leds;
+// leds_t leds;
 
 #define NUM_STEPPERS 3
 
@@ -87,7 +87,7 @@ void init_steppers() {
   ss.min_delay = 500; 
   ss.max_delay = 20000;
   ss.min_pos = 0;
-  ss.max_pos = DEFAULT_MAX_STEPS * .1;
+  ss.max_pos = DEFAULT_MAX_STEPS * .15;
   steppers[0].settings_on_wiggle = ss;
   steppers[1].settings_on_wiggle = ss;
   steppers[2].settings_on_wiggle = ss;
@@ -154,7 +154,6 @@ void setup1() {
   mux.init(8);
   init_steppers();
   init_mode();
-  //bloom.minmax.init_avg(mux.read_raw(SENS_TOF_1));
 
   bloom.init();
 }
@@ -166,7 +165,7 @@ void setup() {
   pinMode(A1, INPUT);
   pinMode(A2, INPUT);
 
-  leds.init();
+  // leds.init();
 
   wait_serial();
 
@@ -204,7 +203,7 @@ void log_inputs() {
   static uint32_t last = 0;
   uint32_t now = millis();
 
-  if(now - last < 750)
+  if(now - last < 250)
     return;
 
   last = now;
@@ -226,6 +225,6 @@ void loop1() {
 void loop() {
   mux.next();
   log_inputs();
-  leds.background_update();
-  leds.step();
+  //leds.background_update();
+  //leds.step();
 }

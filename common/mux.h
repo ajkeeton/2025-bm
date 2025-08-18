@@ -59,8 +59,12 @@ public:
     // Populate all inputs
     do {
         next();
-        delayMicroseconds(t_read_delay);
+        read_delay();
     } while(idx != 0);
+  }
+
+  void read_delay(){
+      delayMicroseconds(t_read_delay);
   }
 
   // Sets address for next read

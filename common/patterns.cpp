@@ -1,9 +1,11 @@
 #include "common.h"
 #include "patterns.h"
 #include "gradient_palettes.h"
-#include "wifi.h"
 
+#ifdef USE_WIFI
+#include "wifi.h"
 extern wifi_t wifi;
+#endif
 
 // Also, try ForestColors_p and HeatColors_p: https://fastled.io/docs/group___predefined_palettes.html
 DEFINE_GRADIENT_PALETTE( remixed_Fuschia_7_gp ) {
@@ -54,15 +56,8 @@ void rainbow_t::update() {
 }
 
 void tracer_t::step() {
-    #if 0
-    Serial.print(ripples[i].init_pos);
-    Serial.print("\t");
-    Serial.print(ripples[i].get_pos());
-    Serial.print("\t");
-    Serial.print(ripples[i].get_neg_pos());
-    Serial.print("\t");
-    Serial.println(ripples[i].life);
-    #endif
+    //Serial.printf("tracer_t::step - pos: %d, velocity: %d, life: %d, brightness: %d, exist: %d\n", 
+    //  pos, velocity, life, brightness, exist);
     
     pos += velocity;
     life++;
@@ -184,6 +179,7 @@ void tracer_v2_pulse_t::step() {
   else {
     if(!pos) {//} && leds[1] == CRGB::Black) {
       // Tell the gardener that we're done so it can forward the pulse to the others
+      #ifdef USE_WIFI
       wifi.send_pulse(
           color,
           fade,
@@ -192,6 +188,7 @@ void tracer_v2_pulse_t::step() {
       exist = false;
       Serial.printf("Sending pulse: %lu, %lu, %lu, %lu\n", color, fade, spread, t_update_delay);   
       return;
+      #endif
     }
 
     if(pos < spread)

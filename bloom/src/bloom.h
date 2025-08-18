@@ -36,12 +36,16 @@ public:
     bool in_init();
     bool is_blooming();
 
+    void check_activity();
+
     BLOOM_STATE_T state = BLOOM_INIT;
     stepper_t *inner = nullptr,
               *middle = nullptr,
               *outer = nullptr;
 
-    uint32_t t_last_bloom = 0;
+    uint32_t t_last_bloom = 0,
+             t_last_activity = 0,
+             t_last_close = 0;
 
     min_max_range_t minmax; 
 };
