@@ -90,22 +90,20 @@ void leds_t::handle_glow() {
 
     uint32_t now = millis();
     uint32_t age = now - trigger_time;
-    if(age > 2500)
-        age = 2500;
-    uint8_t brightness = map(age, 0, 2500, 0, 255);
+    if(age > 3500)
+        age = 3500;
+    uint8_t brightness = map(age, 0, 3500, 0, 255);
 
     CRGB color = rainbow.get(0, brightness);
-
     uint16_t max_spread = num_leds * 0.12;
     uint16_t spread = map(trigger_pct, 0, 100, 0, max_spread);
     spread = constrain(spread, 1, max_spread);  
 
-   // Serial.printf("leds_t::handle_glow - age: %u, brightness: %u, spread: %u\n", age, brightness, spread);
+    Serial.printf("leds_t::handle_glow - age: %u, brightness: %u, spread: %u\n", age, brightness, spread);
 
     for(int i=0; i<spread; i++) {
         int j = LED_AT_TIP - i;
         int k = LED_AT_TIP + i;
-        uint8_t b = 255 - map(i, 0, spread, 0, brightness);
 
         if(j >= 0) {
             layer_colored_glow.set(j, color, 250);
@@ -151,6 +149,10 @@ void leds_t::handle_glow() {
 
 void leds_t::handle_pir() {
     trigger_pct = 100;
+    if(!trigger_time) {
+        trigger_time = millis();
+        triggered = true;
+    }
 }
     
 #if 0
