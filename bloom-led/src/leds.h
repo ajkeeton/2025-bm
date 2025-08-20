@@ -1,12 +1,12 @@
 #pragma once
-
+#include "common.h"
 #include "common/patterns.h"
 #include <FastLED.h>
 
 #define LED_PIN 15
 #define LED_TYPE WS2812
 #define COLOR_ORDER RGB
-#define NUM_LEDS 144
+#define NUM_LEDS 144*2 
 #define LED_AT_TIP 135
 
 class leds_t {
@@ -54,6 +54,10 @@ public:
     void background_update();
     void step();
     void trigger(uint16_t dist);
+    void handle_glow();
+    void handle_pir();
+
+    float trigger_pct = 0;
 
 private:
     int pattern_idx = 0;
@@ -74,6 +78,5 @@ private:
 
 
     uint32_t trigger_time = 0;
-    float trigger_pct = 0;
     bool triggered = false;
 };

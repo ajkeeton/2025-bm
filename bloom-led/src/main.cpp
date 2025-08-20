@@ -1,7 +1,8 @@
 #include "common/common.h"
 #include "leds.h"
 
-#define SONAR_MIN_TO_TRIGGER 25
+#define SONAR_BENCH_MIN_TO_TRIGGER 70
+#define SONAR_BLOOM_MIN_TO_TRIGGER 25
 
 #define PIN_SONAR1_IN 14
 #define PIN_SONAR1_OUT 13
@@ -12,8 +13,12 @@
 #define PIN_PIR1 10
 #define PIN_PIR2 9
 
-#define PIN_TRIGGER_BLOOM1 18
-#define PIN_TRIGGER_BLOOM2 19
+#define PIN_TRIGGER_BLOOM_UPPER 18
+#define PIN_TRIGGER_BLOOM_LOWER 19
+
+// From motor boards
+#define PIN_IN_BLOOM1 20
+#define PIN_IN_BLOOM2 21
 
 leds_t leds;
 bool setup_0_done = false;
@@ -32,20 +37,23 @@ void setup() {
   Serial.begin(9600);
   leds.init();
 
-  pinMode(PIN_SONAR1_OUT, OUTPUT);
+  pinMode(PIN_SONAR1_OUT, OUTPUT); 
   digitalWrite(PIN_SONAR1_OUT, LOW);
   pinMode(PIN_SONAR2_OUT, OUTPUT);
   digitalWrite(PIN_SONAR2_OUT, LOW);
 
   pinMode(PIN_SONAR1_IN, INPUT);
   pinMode(PIN_SONAR2_IN, INPUT);
-  pinMode(PIN_PIR1, INPUT);
-  pinMode(PIN_PIR2, INPUT);
+  pinMode(PIN_PIR1, INPUT_PULLDOWN);
+  pinMode(PIN_PIR2, INPUT_PULLDOWN);
 
-  pinMode(PIN_TRIGGER_BLOOM1, OUTPUT);
-  pinMode(PIN_TRIGGER_BLOOM2, OUTPUT);
-  digitalWrite(PIN_TRIGGER_BLOOM1, LOW);
-  digitalWrite(PIN_TRIGGER_BLOOM2, LOW);
+  pinMode(PIN_TRIGGER_BLOOM_UPPER, OUTPUT);
+  pinMode(PIN_TRIGGER_BLOOM_LOWER, OUTPUT);
+  digitalWrite(PIN_TRIGGER_BLOOM_UPPER, LOW);
+  digitalWrite(PIN_TRIGGER_BLOOM_LOWER, LOW);
+
+  pinMode(PIN_IN_BLOOM1, INPUT_PULLDOWN);
+  pinMode(PIN_IN_BLOOM2, INPUT_PULLDOWN);
 
   wait_serial();
 
@@ -124,7 +132,7 @@ void do_pir(int in_mux) {
 }
 #endif
 
-long do_sonar(int out_pin, int in_pin, bool log) {
+uint16_t do_sonar(int out_pin, int in_pin, bool log) {
   // The ping is triggered by a high pulse of 2 or more microseconds.
   // Give a short low pulse beforehand to ensure a clean low pulse:
   digitalWrite(out_pin, LOW);
@@ -155,6 +163,7 @@ bool do_pir(int in_pin, bool log) {
 
 void loop1() {
   blink();
+  
   // XXX This must be on the same core as the sonar since sonar'ing
   // holds the address
   // mux.next();
@@ -173,32 +182,67 @@ void loop1() {
   }
 
   // Facing seat. Trigger initial bloom
-  do_sonar(PIN_SONAR1_OUT, PIN_SONAR1_IN, log);
+  uint16_t s1 = do_sonar(PIN_SONAR1_OUT, PIN_SONAR1_IN, log);
 
-  // LED changes, second bloom
-  uint32_t s2 = do_sonar(PIN_SONAR2_OUT, PIN_SONAR2_IN, log);
-  uint32_t s2pct = 0;
+  s1 = map(s1, 0, SONAR_BENCH_MIN_TO_TRIGGER, 100, 0);
+  s1 = constrain(s1, 0, 100);
 
-  if(s2 < SONAR_MIN_TO_TRIGGER && s2) {
-    // Scale s2 to perentage
-    s2pct = map(s2, 0, SONAR_MIN_TO_TRIGGER, 100, 0);
-    //Serial.printf("Trigger bloom2: sonar %lu -> %lu%%\n", s2, s2pct);
-    //leds.trigger(s2pct);
+  if(s1 > 0) {
+    digitalWrite(PIN_TRIGGER_BLOOM_UPPER, HIGH);
+    digitalWrite(PIN_TRIGGER_BLOOM_LOWER, HIGH);
+  }
+  else {
+    digitalWrite(PIN_TRIGGER_BLOOM_UPPER, LOW);
+    digitalWrite(PIN_TRIGGER_BLOOM_LOWER, LOW);
   }
 
-  if(s2pct > 40) 
-      digitalWrite(PIN_TRIGGER_BLOOM2, HIGH);
-  else
-      digitalWrite(PIN_TRIGGER_BLOOM2, LOW);
+  // Only do this when the top has opened
+  if(digitalRead(PIN_IN_BLOOM1) || digitalRead(PIN_IN_BLOOM2))
+    if(log) Serial.printf("Currently in bloom: %d %d\n", 
+        digitalRead(PIN_IN_BLOOM1), digitalRead(PIN_IN_BLOOM2));
+
+    #if 0
+    // LED changes, second bloom
+    uint16_t s2 = do_sonar(PIN_SONAR2_OUT, PIN_SONAR2_IN, log);
+    uint32_t s2pct = 0;
+
+    s2pct = map(s2, 0, SONAR_BLOOM_MIN_TO_TRIGGER, 100, 0);
+    s2pct = constrain(s2pct, 0, 100);
+    leds.trigger(s2pct);
+
+    if(log) 
+      Serial.printf("leds_t::trigger - %d% -> %.2f\n", s2pct, leds.trigger_pct);
+
+    //if(s2pct > 40) 
+    //    digitalWrite(PIN_TRIGGER_BLOOM2, HIGH);
+    //else
+    //    digitalWrite(PIN_TRIGGER_BLOOM2, LOW);
+  } 
+  else {
+    leds.trigger(0);
+  }
+  #endif
 
   bool p1 = do_pir(PIN_PIR1, log);
   bool p2 = do_pir(PIN_PIR2, log);
 
-  if(p1 || p2)
+  // Let the motor controllers decide
+  #if 0
+  if(p1 || p2) {
     digitalWrite(PIN_TRIGGER_BLOOM1, HIGH);
-  else 
+    digitalWrite(PIN_TRIGGER_BLOOM2, HIGH);
+
+  }
+  else {
     digitalWrite(PIN_TRIGGER_BLOOM1, LOW);
-  
+    digitalWrite(PIN_TRIGGER_BLOOM2, LOW);
+  }
+  #endif
+
+  // PIRs trigger LED change
+  if(p1 || p2) 
+    leds.handle_pir();
+
   //delay(10);
 }
  

@@ -41,17 +41,10 @@ void leds_t::step() {
         FastLED.delay(1);
         return;
     }
+    
+    handle_glow();
 
-    if(triggered) {
-        trigger_pct *= 0.99;
-        if(trigger_pct < 1) {
-            triggered = false;
-            trigger_pct = 0;
-            trigger_time = 0;
-        }
-    }
-
-    // Serial.println("leds_t::step() - updating LEDs");
+    //Serial.println("leds_t::step() - updating LEDs");
     t_last_update = now;
 
     for(int i=0; i<num_leds; i++) {
@@ -71,22 +64,96 @@ void leds_t::background_update() {
     t1.step(2);
     t2.step(2);
     //wave_pulse.step(100);
-    blobs.step(50);
+    // blobs.step(10);
+}
 
-    #if 0
-    switch(pattern_idx) {
-        case 0:
-            blobs.step(100);
-            break;
-        case 1:
-            layer_waves.fade(10);
-            break;
-        default:
-            pattern_idx = 0;
+void leds_t::trigger(uint16_t pct) {
+    trigger_pct = (trigger_pct * 19 + pct) / 20;
+    
+    if(!trigger_time) {
+        trigger_time = millis();
+        triggered = true;
     }
+}
+
+void leds_t::handle_glow() {    
+    if(trigger_pct < 1) {
+        triggered = false;
+        trigger_pct = 0;
+        trigger_time = 0;
+        return;
+    }
+    #ifdef LED_ON_PIR
+    else {
+        trigger_pct *= 0.98;
+    }
+
+    uint32_t now = millis();
+    uint32_t age = now - trigger_time;
+    if(age > 2500)
+        age = 2500;
+    uint8_t brightness = map(age, 0, 2500, 0, 255);
+
+    CRGB color = rainbow.get(0, brightness);
+
+    uint16_t max_spread = num_leds * 0.12;
+    uint16_t spread = map(trigger_pct, 0, 100, 0, max_spread);
+    spread = constrain(spread, 1, max_spread);  
+
+   // Serial.printf("leds_t::handle_glow - age: %u, brightness: %u, spread: %u\n", age, brightness, spread);
+
+    for(int i=0; i<spread; i++) {
+        int j = LED_AT_TIP - i;
+        int k = LED_AT_TIP + i;
+        uint8_t b = 255 - map(i, 0, spread, 0, brightness);
+
+        if(j >= 0) {
+            layer_colored_glow.set(j, color, 250);
+        }
+        if(k < num_leds) {
+            layer_colored_glow.set(k, color, 250);
+        }
+    }
+
+    layer_colored_glow.blur(100);
+
+    #else
+    uint32_t now = millis();
+    uint32_t age = now - trigger_time;
+    if(age > 5000)
+        age = 5000;
+
+    uint8_t brightness = 200; // map(age, 0, 5000, 20, 255);
+    CRGB color = rainbow.get(0, brightness);
+
+    uint16_t max_spread = num_leds * 0.5;
+    uint16_t spread = map(trigger_pct, 0, 100, 0, max_spread);
+    spread = constrain(spread, 1, max_spread);  
+
+   // Serial.printf("leds_t::handle_glow - age: %u, brightness: %u, spread: %u\n", age, brightness, spread);
+
+    for(int i=0; i<spread; i++) {
+        int j = LED_AT_TIP - i;
+        int k = LED_AT_TIP + i;
+        uint8_t b = 255 - map(i, 0, spread, 0, brightness);
+
+        if(j >= 0) {
+            layer_colored_glow.set(j, color, 250);
+        }
+        if(k < num_leds) {
+            layer_colored_glow.set(k, color, 250);
+        }
+    }
+
+    layer_colored_glow.blur(100);
     #endif
 }
 
+void leds_t::handle_pir() {
+    trigger_pct = 100;
+}
+    
+#if 0
 void leds_t::trigger(uint16_t pct) {
     Serial.printf("leds_t::trigger - %d%\n", pct);
 
@@ -121,7 +188,7 @@ void leds_t::trigger(uint16_t pct) {
     uint8_t b = 255 - map(i, 0, spread, 0, brightness);
 
     if(j >= 0) {
-      CRGB color = rainbow.get(j, b);
+        CRGB color = rainbow.get(j, b);
       layer_colored_glow.set(j, color, 250);
     }
     if(k < num_leds) {
@@ -132,3 +199,4 @@ void leds_t::trigger(uint16_t pct) {
 
   layer_colored_glow.blur(100);
 }
+#endif
