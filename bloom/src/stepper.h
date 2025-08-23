@@ -116,7 +116,7 @@ public:
     hall.init(lsl);
   }
 
-  void do_init() {
+  void set_init() {
     state = STEP_INIT;
     set_forward(false);
     set_target(-DEFAULT_MAX_STEPS*2, settings_on_open);

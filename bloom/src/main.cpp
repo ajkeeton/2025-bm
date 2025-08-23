@@ -21,7 +21,7 @@ void init_steppers() {
 
   step_settings_t ss;
 
-  #ifdef BLOOM_A
+  #ifdef BLOOM_TOP
   steppers[2].init(2, STEP_EN_3, STEP_PULSE_3, STEP_DIR_3, 
                    SENS_LIMIT_3, DELAY_MIN, DELAY_MAX);
 
@@ -54,19 +54,19 @@ void init_steppers() {
   ss.accel = 0.00001;
   steppers[2].settings_on_open = ss;
 
-  ss.accel = 0.000002;
+  ss.accel = 0.0000015;
   ss.pause_ms = 50;
   ss.min_delay = 500; 
   ss.max_delay = 20000;
   ss.min_pos = 0;
-  ss.max_pos = DEFAULT_MAX_STEPS * .15;
+  ss.max_pos = DEFAULT_MAX_STEPS * .2;
   steppers[0].settings_on_wiggle = ss;
   steppers[1].settings_on_wiggle = ss;
   steppers[2].settings_on_wiggle = ss;
 
-  steppers[0].pos_end = DEFAULT_MAX_STEPS * 1.25;
+  steppers[0].pos_end = DEFAULT_MAX_STEPS * 1.2;
   steppers[1].pos_end = DEFAULT_MAX_STEPS;
-  steppers[2].pos_end = DEFAULT_MAX_STEPS * 1.4;
+  steppers[2].pos_end = DEFAULT_MAX_STEPS;
 
   steppers[0].set_backwards();
   steppers[2].set_backwards();
@@ -174,6 +174,11 @@ void setup() {
   pinMode(A1, INPUT);
   pinMode(A2, INPUT);
 
+  pinMode(SIGNAL_IN_BLOOM1, OUTPUT);
+  pinMode(SIGNAL_IN_BLOOM2, OUTPUT);
+  digitalWrite(SIGNAL_IN_BLOOM1, LOW);
+  digitalWrite(SIGNAL_IN_BLOOM2, LOW);
+
   // leds.init();
 
   wait_serial();
@@ -228,7 +233,28 @@ void loop1() {
   return;
   #endif
 
+  bloom.log = false;
+
+  static uint32_t last_log = 0;
+  uint32_t now = millis();
+
+  if (now - last_log >= 500) {
+    bloom.log = true;
+    last_log = now;
+  }
+  else {
+    bloom.log = false;
+  } 
+  
   bloom.next();
+
+  if(bloom.is_bloomed()) {
+    digitalWrite(SIGNAL_IN_BLOOM1, HIGH);
+    digitalWrite(SIGNAL_IN_BLOOM2, HIGH);
+  } else {
+    digitalWrite(SIGNAL_IN_BLOOM1, LOW);
+    digitalWrite(SIGNAL_IN_BLOOM2, LOW);
+  }
 }
 
 void loop() {

@@ -143,16 +143,15 @@ void stepper_t::set_target(int32_t tgt, const step_settings_t &ss) {
     set_forward(false);
   }
 
+  dprintf(LOG_DEBUG, "%d: set_target: state: %d, current position: %ld, new target: %ld\n", 
+      idx, state, position, pos_tgt);
   accel.set_pause_ms(ss.pause_ms);
-
-  //Serial.printf("%d: Position: %d, New target: %d End: %d fwd/back: %d\n",
-  //  idx, position, pos_tgt == -INT_MAX ? 0 : pos_tgt, pos_end, forward);
 }
 
 void stepper_t::run() {
   if(disable)
     return;
-    
+
   uint32_t now = millis();
   
   log();
@@ -207,35 +206,40 @@ void stepper_t::run() {
 void stepper_t::trigger_bloom() {
   if(state == STEP_BLOOM || state == STEP_BLOOM_WIGGLE)
     return;
-    
+  dprintf(LOG_DEBUG, "%d: Triggering bloom from state %d\n", idx, state);
   state = STEP_BLOOM;
   set_target(pos_end, settings_on_open);
 }
 
 void stepper_t::log() {
+  if (debug_level < LOG_DEBUG)
+    return;
   uint32_t now = millis();
-  if (debug_level >= LOG_DEBUG && now - last_log > 1000) {
-    uint32_t us = micros();
-    last_log = now;
 
-    const char* state_str = nullptr;
-    switch (state) {
-      case STEP_INIT: state_str = "init"; break;
-      case STEP_BLOOM: state_str = "bloom"; break;
-      case STEP_BLOOM_WIGGLE: state_str = "bloom_wiggle"; break;
-      case STEP_WIGGLE: state_str = "wiggle"; break;
-      case STEP_CLOSE: state_str = "close"; break;
-      case STEP_SWEEP: state_str = "sweep"; break;
-      case STEP_WAIT: state_str = "wait"; break;
-      default: state_str = "unknown"; break;
-    }
+  if(now - last_log < 1000)
+    return;
 
-    dprintf(LOG_DEBUG, "%d: Position: %ld, Target: %ld, State: %s, Fwd/Back: %d, "
-        "Accel Delay: %ld, A0: %f, is ready: %d !(%lu && %lu)\n",
-      idx, position, pos_tgt == -INT_MAX ? -99999 : pos_tgt,
-      state_str, forward, 
-      accel.delay_current, accel.accel_0, accel.is_ready(),
-      us - accel.t_last_update < accel.t_pause_for,
-      us - accel.t_last_update < accel.delay_current);
+  uint32_t us = micros();
+  last_log = now;
+
+  const char* state_str = nullptr;
+  switch (state) {
+    case STEP_INIT: state_str = "init"; break;
+    case STEP_BLOOM: state_str = "bloom"; break;
+    case STEP_BLOOM_WIGGLE: state_str = "bloom_wiggle"; break;
+    case STEP_WIGGLE: state_str = "wiggle"; break;
+    case STEP_CLOSE: state_str = "close"; break;
+    case STEP_SWEEP: state_str = "sweep"; break;
+    case STEP_WAIT: state_str = "wait"; break;
+    default: state_str = "unknown"; break;
   }
+
+  dprintf(LOG_DEBUG, "%d: Position: %ld, Target: %ld, State: %s, Fwd/Back: %d, "
+      "Accel Delay: %ld, A0: %f, is ready: %d !(%lu && %lu)\n",
+    idx, position, pos_tgt == -INT_MAX ? -99999 : pos_tgt,
+    state_str, forward, 
+    accel.delay_current, accel.accel_0, accel.is_ready(),
+    us - accel.t_last_update < accel.t_pause_for,
+    us - accel.t_last_update < accel.delay_current);
+  
 }

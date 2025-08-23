@@ -67,6 +67,7 @@ public:
   }
 
   void set_pause_ms(uint32_t t) {
+    // Serial.printf("Accel: pausing for %lu ms\n", t);
     t_pause_for = t * 1000; // convert to micros
     t_last_update = micros();
     t_move_started = 0;
@@ -84,7 +85,7 @@ public:
 
     // NOTE: using subtraction as follows will account for integer overflow
     if(now - t_last_update < t_pause_for) {
-      //Serial.printf("Accel: Not ready yet, %lu < %lu\n", now - t_last_update, t_pause_for);
+      // Serial.printf("Accel: pausing %lu < %lu\n", now - t_last_update, t_pause_for);
       return false;
     }
     
@@ -96,8 +97,10 @@ public:
       return false;
     }
 
-    if(now - t_last_update < delay_current)
+    if(now - t_last_update < delay_current) {
+      // Serial.printf("Accel: delaying, %lu < %lu\n", now - t_last_update, delay_current);
       return false;
+    }
 
     t_last_update = now;
     return true;

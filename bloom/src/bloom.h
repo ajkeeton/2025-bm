@@ -2,10 +2,15 @@
 #include "stepper.h"
 #include "common/minmax.h"
 
+#define TIMEOUT_BLOOM 2500 // ms to wait before auto-closing bloom
+#define TIMEOUT_REBLOOM 500 // ms to wait before we rebloom
+#define TIMEOUT_PETALS_OPEN 20000 // Lower petals open. Should be a high number
+
 enum BLOOM_STATE_T {
     BLOOM_INIT,
-    BLOOM,
-    BLOOM_CLOSE
+    BLOOM_WAIT, // Lower petals open, top closed
+    BLOOM_FULL, // All open
+   //  BLOOM_CLOSE, // All closed
 };
 
 class bloom_t {
@@ -29,6 +34,10 @@ public:
     }
 
     void next();
+
+    void handle_triggers();
+    void handle_timeouts();
+    
     bool do_bloom(stepper_t &s);
     void do_bloom();
     void end_bloom();
@@ -37,10 +46,12 @@ public:
     void do_wiggle();
     void do_close(stepper_t &s);
     void do_close();
+    // Only applies to lower
+    void do_startle();
 
     bool in_init();
     bool is_blooming();
-
+    bool is_bloomed();
     void check_activity();
 
     BLOOM_STATE_T state = BLOOM_INIT;
@@ -53,4 +64,6 @@ public:
              t_last_close = 0;
 
     min_max_range_t minmax; 
+
+    bool log = false;
 };
