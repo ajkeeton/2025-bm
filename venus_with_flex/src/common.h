@@ -57,7 +57,7 @@ enum LOG_LEVEL {
 #define SENS_FLEX_3 2
 
 // Prox sensors
-#define SENS_PROX_1 4
+#define SENS_PROX_1 3
 //#define SENS_TOF_1 4
 #define SENS_PIR_1 5
 /////////////////////////////////////////

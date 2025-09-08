@@ -17,16 +17,21 @@ void bloom_t::next() {
     }   
 }
 
-void bloom_t::handle_triggers() {    
-    bool pir = mux.read_raw(SENS_REMOTE_1) > 120;
-    bool sonar = mux.read_raw(SENS_REMOTE_2) > 120;
+void bloom_t::handle_triggers() {
+    #ifdef BLOOM_TOP
+    bool pir = mux.read_raw(SENS_REMOTE_2) > 120;
+    bool sonar = mux.read_raw(SENS_REMOTE_1) > 120;
+    #else
+    bool pir = mux.read_raw(SENS_REMOTE_2) > 120;
+    bool sonar = mux.read_raw(SENS_REMOTE_1) > 120;
+    #endif
 
     if(!pir && !sonar)
         return;
 
-    
     t_last_activity = millis();
-    // Serial.printf("Bloom: handle triggers: PIR: %d, Sonar: %d\n", pir, sonar);
+    if(log)
+        Serial.printf("Bloom: handle triggers: PIR: %d, Sonar: %d\n", pir, sonar);
 
     // Our current state dictates behavior from triggrers
     switch(state) {
@@ -54,7 +59,7 @@ void bloom_t::handle_triggers() {
             #endif
             break;
         case BLOOM_FULL:
-            // Already bloomed, do nothing
+            // Already in bloom, do nothing
             break;
         default:
             Serial.printf("Top triggered, but ignoring state: %d\n", state);
@@ -147,7 +152,7 @@ void bloom_t::init() {
     init_stepper(*middle);
     init_stepper(*inner);
 
-    #ifdef BLOOM_A
+    #ifdef BLOOM_TOP
     while(inner->state == STEP_INIT) { 
         inner->run();
         blink();
@@ -188,14 +193,25 @@ void bloom_t::init() {
     end_bloom();
 }
 
-void bloom_t::do_close(stepper_t &s) {
+void bloom_t::do_close(stepper_t &s, SPEED_T speed) {
     if(s.disable) return;
     if(s.state != STEP_BLOOM_WIGGLE && s.state != STEP_BLOOM)
         return;
 
     t_last_close = millis();
     s.state = STEP_CLOSE;
-    s.set_target(0, s.settings_on_close);
+
+    switch(speed) {
+        case SPEED_SLOW:
+            s.set_target(0, s.settings_on_close_slow);
+            break;
+        case SPEED_FAST:
+            s.set_target(0, s.settings_on_close_fast);
+            break;
+        case SPEED_RAND:
+            s.set_target(0, s.settings_on_close_fast);
+            break;
+    }
 }
 
 bool bloom_t::do_bloom(stepper_t &s) {
@@ -247,9 +263,9 @@ void bloom_t::end_bloom() {
     // NOTE: when a bloom ends, go ahead and retract the lower petals
     // They'll expand again after a timeout
 
-    do_close(*inner);
-    do_close(*middle);
-    do_close(*outer);
+    do_close(*inner, SPEED_SLOW);
+    do_close(*middle, SPEED_SLOW);
+    do_close(*outer, SPEED_SLOW);
     t_last_close = millis();
     state = BLOOM_WAIT;
 }
@@ -266,12 +282,12 @@ void bloom_t::do_startle() {
 
     //lprintf(true, "Startled. Closing (%lu > 120)\n", 
     //    mux.read_raw(SENS_REMOTE_1));
-    //if(log) 
+    if(log)
         Serial.printf("Startled. Closing (%lu > 120)\n", 
             mux.read_raw(SENS_REMOTE_1)); 
 
-    do_close(*inner);
-    do_close(*middle);
+    do_close(*inner, SPEED_FAST);
+    do_close(*middle, SPEED_FAST);
 
     t_last_close = millis();
     t_last_bloom = 0;

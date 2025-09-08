@@ -28,7 +28,7 @@ struct rainbow_t {
       //hsv.value = brightness;
       //return hsv;
       CRGB temp = leds[i];
-      temp.nscale8_video(255-brightness);
+      temp.nscale8_video(brightness);
       return temp;
   }
 
@@ -213,7 +213,7 @@ struct tracer_t {
     max_life = max;
     exist = true;
     brightness = DEF_RIPPLE_BRIGHTNESS;
-    color = millis();
+    color = millis()/500;
     //color = 1; // random8() & 1;
     fade = f;
   }
@@ -589,5 +589,66 @@ struct layer_t {
 
     void fade(uint8_t fade_amount) {
         fadeToBlackBy(targets, num_leds, fade_amount);
+    }
+};
+
+#define NUM_SPARKLEYS 2
+
+class sparkleys_t {
+public:
+  int life = 0;
+  int b = 255;
+  int led = 0;
+
+  void init(int nleds) {
+    led = random16(nleds);
+    b = 255;
+    life = random16(30, 120);
+  }
+};
+
+class sparkle_t {
+public:
+    CRGB *targets = NULL;
+    uint16_t num_leds = 0;
+    uint32_t last_update = 0;
+    sparkleys_t sparkleys[NUM_SPARKLEYS];
+    int t_delay = 5, t_last = 0;
+
+    void init(CRGB *l, uint16_t n) {
+        targets = l;
+        num_leds = n;
+        last_update = millis();      
+    }
+
+    void step() {
+      uint32_t now = millis();
+      if(now - t_delay < t_last)
+        return;
+      t_last = now;
+
+      fadeToBlackBy(targets, num_leds, 5);
+
+      if(random8() < 250)
+        return;
+
+      for(int i=0; i<NUM_SPARKLEYS; i++) {
+        #if 0
+        if(!sparkleys[i].life) {
+          if(random8() > 250) {
+            sparkleys[i].init(num_leds);
+            targets[sparkleys[i].led] = CRGB::White;
+            continue;
+          }
+        }
+        #endif
+
+        int idx = random() % num_leds;
+        if(targets[idx].r > 1 || targets[idx].g > 1 || targets[idx].b > 1)
+          continue;
+
+        targets[idx] = CRGB::White/4;
+      }
+
     }
 };

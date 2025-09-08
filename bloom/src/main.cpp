@@ -28,35 +28,51 @@ void init_steppers() {
   ss.pause_ms = 10;
   ss.accel = 0.00001;
   ss.min_delay = 300;
-  steppers[0].settings_on_close = ss;
+  steppers[0].settings_on_close_fast = ss;
 
   ss.pause_ms = 500;
   ss.min_delay = 400;
-  steppers[1].settings_on_close = ss;
+  steppers[1].settings_on_close_fast = ss;
 
   ss.pause_ms = 1000;
   ss.min_delay = 500;
   ss.accel = 0.00005;
-  steppers[2].settings_on_close = ss;
+  steppers[2].settings_on_close_fast = ss;
+
+
+  ss.pause_ms = 10;
+  ss.accel = 0.00001;
+  ss.min_delay = 300;
+  steppers[0].settings_on_close_slow = ss;
+
+  ss.pause_ms = 500;
+  ss.min_delay = 400;
+  steppers[1].settings_on_close_slow = ss;
 
   ss.pause_ms = 1000;
-  ss.accel = 0.00001;
+  ss.min_delay = 500;
+  ss.accel = 0.00005;
+  steppers[2].settings_on_close_fast = ss;
+
+
+  ss.pause_ms = 1000;
+  ss.accel = 0.00001/2;
   ss.min_delay = 250;
   steppers[0].settings_on_open = ss;
 
   ss.pause_ms = 500;
   ss.min_delay = 200;
-  ss.accel = 0.00001;
+  ss.accel = 0.00001/2;
   steppers[1].settings_on_open = ss;
 
   ss.pause_ms = 50;
   ss.min_delay = 150;
-  ss.accel = 0.00001;
+  ss.accel = 0.00001/2;
   steppers[2].settings_on_open = ss;
 
-  ss.accel = 0.0000015;
+  ss.accel = 0.000001;
   ss.pause_ms = 50;
-  ss.min_delay = 500; 
+  ss.min_delay = 400; 
   ss.max_delay = 20000;
   ss.min_pos = 0;
   ss.max_pos = DEFAULT_MAX_STEPS * .2;
@@ -78,12 +94,21 @@ void init_steppers() {
 
   ss.pause_ms = 10;
   ss.accel = 0.00001;
-  ss.min_delay = 300;
-  steppers[0].settings_on_close = ss;
+  ss.min_delay = 100;
+  steppers[0].settings_on_close_fast = ss;
+
+  ss.pause_ms = 50;
+  ss.min_delay = 200;
+  steppers[1].settings_on_close_fast = ss;
+
+  ss.pause_ms = 100;
+  ss.accel = 0.000005;
+  ss.min_delay = 400;
+  steppers[0].settings_on_close_slow = ss;
 
   ss.pause_ms = 500;
-  ss.min_delay = 400;
-  steppers[1].settings_on_close = ss;
+  ss.min_delay = 500;
+  steppers[1].settings_on_close_slow = ss;
 
   ss.pause_ms = 1000;
   ss.accel = 0.00001;
@@ -97,10 +122,10 @@ void init_steppers() {
 
   ss.accel = 0.0000015;
   ss.pause_ms = 50;
-  ss.min_delay = 600; 
+  ss.min_delay = 400; 
   ss.max_delay = 20000;
   ss.min_pos = 0;
-  ss.max_pos = DEFAULT_MAX_STEPS * .25;
+  ss.max_pos = DEFAULT_MAX_STEPS * .35;
   steppers[0].settings_on_wiggle = ss;
   steppers[1].settings_on_wiggle = ss;
 
@@ -245,7 +270,7 @@ void loop1() {
   else {
     bloom.log = false;
   } 
-  
+
   bloom.next();
 
   if(bloom.is_bloomed()) {

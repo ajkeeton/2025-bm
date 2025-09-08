@@ -22,3 +22,12 @@ void wait_serial() {
     delay(100);
   }  
 }
+
+void lprintf(bool enabled, const char* fmt, ...) {
+    if (!enabled) return;
+
+    va_list args;
+    va_start(args, fmt);
+    Serial.printf(fmt, args);
+    va_end(args);
+}

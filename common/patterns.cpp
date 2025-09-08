@@ -9,17 +9,17 @@ extern wifi_t wifi;
 
 // Also, try ForestColors_p and HeatColors_p: https://fastled.io/docs/group___predefined_palettes.html
 DEFINE_GRADIENT_PALETTE( remixed_Fuschia_7_gp ) {
-    0,  43,  3, 153,
-   63, 100,  4, 103,
-  127, 188, 10, 105,
-  191, 161, 11, 145,
-  255, 135, 20, 220};
+    0,  80,  3, 153/2,
+   63, 100,  4, 103/2,
+  127, 188, 10, 105/2,
+  191, 161, 11, 145/2,
+  255, 135, 20, 105/2};
 
 CRGBPalette16 palette_wave = Blue_Cyan_Yellow_gp;
 CRGBPalette16 palette_ripple_target = Coral_reef_gp; // OceanColors_p;
-CRGBPalette16 palette_ripple = Coral_reef_gp ;
+// CRGBPalette16 palette_ripple = Coral_reef_gp ;
 CRGBPalette16 palette_asc_blob = remixed_Fuschia_7_gp;
-
+CRGBPalette16 palette_ripple = remixed_Fuschia_7_gp;
 //extern meta_state_t mstate;
 
 void setup_ripples_palette() {
@@ -56,6 +56,7 @@ void rainbow_t::update() {
 }
 
 void tracer_t::step() {
+  // Debugging: print tracer state
     //Serial.printf("tracer_t::step - pos: %d, velocity: %d, life: %d, brightness: %d, exist: %d\n", 
     //  pos, velocity, life, brightness, exist);
     
@@ -114,9 +115,9 @@ void tracer_t::step(uint16_t activity) {
     return;
   last = now;
 
-  if(!exist && random8() > 250)
+  if(!exist && random8() > 240)
     // first param controls how fast the brightness drops. Higher is longer
-    reset(random8(240,254), random(100,255), -1); // random8()&1 ? 1 : -1);
+    reset(random8(240,252), random(60,100), -1); // random8()&1 ? 1 : -1);
   
   if(exist)
     step();

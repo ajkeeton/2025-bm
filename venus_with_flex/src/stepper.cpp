@@ -80,9 +80,9 @@ void stepper_t::choose_next(STEP_STATE next) {
     case STEP_TRIGGERED_INIT:
       dprintf(LOG_DEBUG, "%d: Doing triggered init\n", idx);
       // Start by opening a little 
-      set_target(position * 0.9, settings_on_close);
-      state_next = STEP_GRAB;
-      break;
+      //set_target(position * 0.9, settings_on_close);
+      //state_next = STEP_GRAB;
+      //break;
     case STEP_GRAB:
       set_target(pos_end, settings_on_close);
       accel.set_pause_ms(settings_on_close.pause_ms);
@@ -116,8 +116,6 @@ void stepper_t::choose_next_wiggle() {
 }
 
 void stepper_t::choose_next_wiggle(int32_t lower, int32_t upper) {
-  accel.set_pause_ms(random(250, 1500));
-
   //set_onoff(STEPPER_OFF);
   uint32_t r = random(lower, upper);
   int32_t nxt = 0;
@@ -130,6 +128,9 @@ void stepper_t::choose_next_wiggle(int32_t lower, int32_t upper) {
   nxt = max(lower, nxt);
 
   set_target(nxt, settings_on_wiggle);
+  accel.set_pause_ms(random(150, 750));
+  float a = settings_on_wiggle.accel / (random(0, 100)-50);
+  accel.accel_0 = settings_on_wiggle.accel + a;
 
   // Override the acceleration settings
   //accel.set_target(accel.steps_to_target, 

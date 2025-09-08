@@ -62,7 +62,7 @@ void stepper_t::choose_next() {
 }
 
 void stepper_t::choose_next_bloom_wiggle() {
-  choose_next_wiggle(pos_end*.92, pos_end*.99);
+  choose_next_wiggle(pos_end*.8, pos_end*.99);
   state = STEP_BLOOM_WIGGLE;
 }
 
@@ -72,23 +72,18 @@ void stepper_t::choose_next_wiggle() {
 
 void stepper_t::choose_next_wiggle(int32_t lower, int32_t upper) {
   state = STEP_WIGGLE;
-  accel.set_pause_ms(random(500, 1500));
 
-  //set_onoff(STEPPER_OFF);
-  uint32_t r = random(lower, upper);
-  int32_t nxt = 0;
-  if (position != 0 && random() & 1)
-    nxt = position - r;
-  else
-    nxt = position + r;
+  uint32_t nxt = random(lower, upper);
 
-  nxt = min(nxt, upper);
-  nxt = max(lower, nxt);
-
+  //Serial.printf( "%d: wiggle next: %d, r: %d, current %d, nxt: %d\n", idx, r, position, nxt);
   set_target(nxt, settings_on_wiggle);
+  // XXX This has to go after set_target!
+  accel.set_pause_ms(random(150, 750));
 
-  if(nxt != position)
-    dprintf(LOG_DEBUG, "%d: wiggle next: from %ld to %ld\n", idx, position, nxt);
+  float a = settings_on_wiggle.accel / (random(0, 100)-50);
+
+  accel.accel_0 = settings_on_wiggle.accel + a;
+  Serial.printf( "%d: wiggle next: from %ld to %ld, a: %f\n", idx, position, nxt, a);
 }
 
 void stepper_t::choose_next_sweep() {

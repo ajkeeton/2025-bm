@@ -1,8 +1,8 @@
 #include "common/common.h"
 #include "leds.h"
 
-#define SONAR_BENCH_MIN_TO_TRIGGER 70
-#define SONAR_BLOOM_MIN_TO_TRIGGER 25
+#define SONAR_FRONT_MIN_TO_TRIGGER 30
+// #define SONAR_BLOOM_MIN_TO_TRIGGER 25
 
 #define PIN_SONAR1_IN 14
 #define PIN_SONAR1_OUT 13
@@ -13,8 +13,8 @@
 #define PIN_PIR1 10
 #define PIN_PIR2 9
 
-#define PIN_TRIGGER_BLOOM_UPPER 18
-#define PIN_TRIGGER_BLOOM_LOWER 19
+#define PIN_TRIGGER_SONAR 18
+#define PIN_TRIGGER_PIR   19
 
 // From motor boards
 #define PIN_IN_BLOOM1 20
@@ -22,6 +22,7 @@
 
 leds_t leds;
 bool setup_0_done = false;
+debounce_n_t debounce;
 
 void setup1() {
   wait_serial();
@@ -47,10 +48,10 @@ void setup() {
   pinMode(PIN_PIR1, INPUT_PULLDOWN);
   pinMode(PIN_PIR2, INPUT_PULLDOWN);
 
-  pinMode(PIN_TRIGGER_BLOOM_UPPER, OUTPUT);
-  pinMode(PIN_TRIGGER_BLOOM_LOWER, OUTPUT);
-  digitalWrite(PIN_TRIGGER_BLOOM_UPPER, LOW);
-  digitalWrite(PIN_TRIGGER_BLOOM_LOWER, LOW);
+  pinMode(PIN_TRIGGER_SONAR, OUTPUT);
+  pinMode(PIN_TRIGGER_PIR, OUTPUT);
+  digitalWrite(PIN_TRIGGER_SONAR, LOW);
+  digitalWrite(PIN_TRIGGER_PIR, LOW);
 
   pinMode(PIN_IN_BLOOM1, INPUT_PULLDOWN);
   pinMode(PIN_IN_BLOOM2, INPUT_PULLDOWN);
@@ -95,42 +96,6 @@ long ms_to_inch(long mu) {
   // See: https://www.parallax.com/package/ping-ultrasonic-distance-sensor-downloads/
   return mu / 74 / 2; // mu / 74 / 2;
 }
-
-#if 0
-void do_sonar(int out, int in_mux) {
-  // Select the address for this sonar
-  mux.set_address(in_mux);
-  // Give the mux time to settle
-  mux.read_delay();
-
-  // The ping is triggered by a high pulse of 2 or more microseconds.
-  // Give a short low pulse beforehand to ensure a clean low pulse:
-  digitalWrite(out, LOW);
-  delayMicroseconds(2);
-  digitalWrite(out, HIGH);
-  delayMicroseconds(5);
-  digitalWrite(out, LOW);
-
-  //long duration = pulseIn(PIN_SONAR1_IN, HIGH, 25000); // timeout after 25ms (approx 14ft)
-  long duration = pulseIn(MUX_IN1, HIGH, 25000); // timeout after 25ms (approx 14ft)
-
-  // convert the time into a distance
-  long inches = ms_to_inch(duration);
-
-  Serial.printf("%d: Dur: %ld, To inch: %ldin\n", out, duration, inches);
-}
-
-void do_pir(int in_mux) {
-  // Select the address for this PIR
-  mux.set_address(in_mux);
-  // Give the mux time to settle
-  mux.read_delay();
-
-  bool state = mux.read_switch(in_mux);
-
-  Serial.printf("PIR %d: %s\n", in_mux, state ? "motion!" : "no motion");
-}
-#endif
 
 uint16_t do_sonar(int out_pin, int in_pin, bool log) {
   // The ping is triggered by a high pulse of 2 or more microseconds.
@@ -184,16 +149,14 @@ void loop1() {
   // Facing seat. Trigger initial bloom
   uint16_t s1 = do_sonar(PIN_SONAR1_OUT, PIN_SONAR1_IN, log);
 
-  s1 = map(s1, 0, SONAR_BENCH_MIN_TO_TRIGGER, 100, 0);
-  s1 = constrain(s1, 0, 100);
-
-  if(s1 > 0) {
-    digitalWrite(PIN_TRIGGER_BLOOM_UPPER, HIGH);
-    digitalWrite(PIN_TRIGGER_BLOOM_LOWER, HIGH);
+  if(s1 && debounce.update(s1, SONAR_FRONT_MIN_TO_TRIGGER)) {
+    Serial.printf("sonar triggered - %d\n", s1);
+    digitalWrite(PIN_TRIGGER_SONAR, HIGH);
+    leds.handle_sonar();
   }
   else {
-    digitalWrite(PIN_TRIGGER_BLOOM_UPPER, LOW);
-    digitalWrite(PIN_TRIGGER_BLOOM_LOWER, LOW);
+    // Serial.printf("sonar not triggered: %d\n", s1);
+    digitalWrite(PIN_TRIGGER_SONAR, LOW);
   }
 
   // Only do this when the top has opened
@@ -227,23 +190,17 @@ void loop1() {
   bool p2 = do_pir(PIN_PIR2, log);
 
   // Let the motor controllers decide
-  #if 0
   if(p1 || p2) {
-    digitalWrite(PIN_TRIGGER_BLOOM1, HIGH);
-    digitalWrite(PIN_TRIGGER_BLOOM2, HIGH);
+    digitalWrite(PIN_TRIGGER_PIR, HIGH);
 
   }
   else {
-    digitalWrite(PIN_TRIGGER_BLOOM1, LOW);
-    digitalWrite(PIN_TRIGGER_BLOOM2, LOW);
+    digitalWrite(PIN_TRIGGER_PIR, LOW);
   }
-  #endif
 
   // PIRs trigger LED change
   if(p1 || p2) 
     leds.handle_pir();
-
-  //delay(10);
 }
  
 void loop() {

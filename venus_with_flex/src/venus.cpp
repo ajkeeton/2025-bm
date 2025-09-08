@@ -1,15 +1,16 @@
 #include "common/common.h"
 #include "common/minmax.h"
-#include "common/wifi.h"
+#include "common/hall.h"
+
+// #include "common/wifi.h"
 #include "stepper.h"
 #include "leds.h"
-#include "hall.h"
 
 bool setup0_done = false;
 bool use_tof = false;
 
 mux_t mux;
-wifi_t wifi;
+// wifi_t wifi;
 leds_t leds;
 hall_t hall;
 
@@ -31,14 +32,14 @@ void init_steppers() {
 
   ss.pause_ms = 10;
   ss.accel = 0.0001;
-  ss.min_delay = 80;
+  ss.min_delay = 20;
   steppers[0].settings_on_close = ss;
 
-  ss.pause_ms = 500;
+  ss.pause_ms = 250;
   ss.min_delay = 80;
   steppers[1].settings_on_close = ss;
 
-  ss.pause_ms = 1000;
+  ss.pause_ms = 500;
   ss.min_delay = 80;
   ss.accel = 0.00005;
   steppers[2].settings_on_close = ss;
@@ -58,12 +59,12 @@ void init_steppers() {
   ss.accel = 0.00003;
   steppers[2].settings_on_open = ss;
 
-  ss.accel = 0.000001;
+  ss.accel = 0.00001;
   ss.pause_ms = 50;
-  ss.min_delay = 400; 
+  ss.min_delay = 200;
   ss.max_delay = 20000;
-  ss.min_pos = DEFAULT_MAX_STEPS * .20;
-  ss.max_pos = DEFAULT_MAX_STEPS * .55; 
+  ss.min_pos = DEFAULT_MAX_STEPS * .15;
+  ss.max_pos = DEFAULT_MAX_STEPS * .6; 
 
   steppers[0].settings_on_wiggle = ss;
   steppers[1].settings_on_wiggle = ss;
@@ -79,7 +80,7 @@ void init_steppers() {
     // For limb C only!
     Serial.printf("Pod 3\n");
     steppers[1].set_backwards();
-    steppers[2].set_backwards();
+
     // Avoid a power surge from all starting at once
     delay(1000);
   }
@@ -233,11 +234,6 @@ void loop1() {
 
   log_inputs();
 
-  EVERY_N_MILLISECONDS(100) {
-    // Current sensor is 4 to 30 cm
-
-  }
-
   #ifdef SENS_LOG_ONLY
   return;
   #endif
@@ -247,7 +243,7 @@ void loop1() {
 
   minmax.update(sens);
   // Serial.printf("Sensor: %d, Min: %d, Max: %d\n", sens, minmax.avg_min, minmax.avg_max);
-  // minmax.log_info();
+  //minmax.log_info();
 
   static uint32_t last = 0;
   uint32_t now = millis();

@@ -47,6 +47,8 @@ public:
         FastLED.show();
     }
 
+    void handle_sonar();
+
     void do_rainbow();
     void do_basic_ripples(uint16_t activity);
     void do_high_energy_ripples(uint16_t activity);
@@ -66,6 +68,7 @@ private:
             layer_tracers;
 
     tracer_t t1, t2;
+    sparkle_t sparkles;
     animate_waves_t waves;
     wave_pulse_t wave_pulse;
     blobs_t blobs;
@@ -75,7 +78,6 @@ private:
     int num_leds = NUM_LEDS;
     uint32_t t_last_update = 0;
     uint8_t state = 0;
-
 
     uint32_t trigger_time = 0;
     bool triggered = false;

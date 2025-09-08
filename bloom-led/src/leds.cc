@@ -32,6 +32,8 @@ void leds_t::init() {
     blobs.init(layer_waves.targets, num_leds);
     t1.init(layer_tracers.targets, num_leds, 120);
     t2.init(layer_tracers.targets, num_leds, 0);
+
+    sparkles.init(layer_tracers.targets, num_leds);
 }
 
 void leds_t::step() {
@@ -61,8 +63,11 @@ void leds_t::step() {
 
 void leds_t::background_update() {
     rainbow.update();
-    t1.step(2);
-    t2.step(2);
+    //t1.step(random8(1, 5));
+    //t2.step(random8(0, 2));
+
+    //sparkles.step();
+
     //wave_pulse.step(100);
     // blobs.step(10);
 }
@@ -85,7 +90,7 @@ void leds_t::handle_glow() {
     }
     #ifdef LED_ON_PIR
     else {
-        trigger_pct *= 0.98;
+        trigger_pct *= 0.99;
     }
 
     uint32_t now = millis();
@@ -95,11 +100,11 @@ void leds_t::handle_glow() {
     uint8_t brightness = map(age, 0, 3500, 0, 255);
 
     CRGB color = rainbow.get(0, brightness);
-    uint16_t max_spread = num_leds * 0.12;
+    uint16_t max_spread = num_leds * 0.025;
     uint16_t spread = map(trigger_pct, 0, 100, 0, max_spread);
     spread = constrain(spread, 1, max_spread);  
 
-    Serial.printf("leds_t::handle_glow - age: %u, brightness: %u, spread: %u\n", age, brightness, spread);
+    //Serial.printf("leds_t::handle_glow - age: %u, brightness: %u, spread: %u\n", age, brightness, spread);
 
     for(int i=0; i<spread; i++) {
         int j = LED_AT_TIP - i;
@@ -148,6 +153,14 @@ void leds_t::handle_glow() {
 }
 
 void leds_t::handle_pir() {
+    trigger_pct = 100;
+    if(!trigger_time) {
+        trigger_time = millis();
+        triggered = true;
+    }
+}
+
+void leds_t::handle_sonar() {
     trigger_pct = 100;
     if(!trigger_time) {
         trigger_time = millis();

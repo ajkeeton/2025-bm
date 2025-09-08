@@ -7,7 +7,7 @@
 #include "common/bench.h"
 
 #define STEP_LOG_DELAY 1000
-#define DEFAULT_MAX_STEPS 5000
+#define DEFAULT_MAX_STEPS 7000
 
 #define DELAY_MIN 80 // in MICRO seconds
 #define DELAY_MAX 20000 // in MICRO seconds
@@ -121,7 +121,7 @@ public:
 
   void do_init() {
     state = STEP_INIT;
-    set_target(-DEFAULT_MAX_STEPS*2, settings_on_open);
+    set_target(-DEFAULT_MAX_STEPS, settings_on_open);
   }
 
   void set_backwards() {

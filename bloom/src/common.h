@@ -3,7 +3,7 @@
 #include <Wire.h>
 #include <stdint.h>
 
-// #define BLOOM_TOP
+#define BLOOM_TOP
 
 //#define SENS_LOG_ONLY
 //#define OPEN_CLOSE_ONLY

@@ -7,7 +7,7 @@
 
 #define STEP_LOG_DELAY 1000
 
-#ifdef BLOOM_A
+#ifdef BLOOM_TOP
 #define DEFAULT_MAX_STEPS 4500
 #else
 #define DEFAULT_MAX_STEPS 11000
@@ -82,7 +82,8 @@ public:
 
   uint32_t last_log = 0;
 
-  step_settings_t settings_on_close,
+  step_settings_t settings_on_close_fast,
+                  settings_on_close_slow,
                   settings_on_open,
                   settings_on_wiggle;
 

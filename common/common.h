@@ -9,6 +9,7 @@
 
 void blink();
 void wait_serial();
+void lprintf(bool enabled, const char* fmt, ...);
 
 struct log_throttle_t {
   uint32_t last = 0;
