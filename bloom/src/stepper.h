@@ -25,8 +25,7 @@ enum STEP_STATE {
   STEP_WIGGLE,
   STEP_BLOOM,
   STEP_BLOOM_WIGGLE,
-  STEP_BLOOM_2, // For the petals
-
+  STEP_HALF_BLOOM, // For the lower petals
   STEP_WAIT
 };
 
@@ -150,11 +149,13 @@ public:
   void choose_next_wiggle();
   void choose_next_wiggle(int32_t lower, int32_t upper);
   void choose_next_bloom_wiggle();
+  void choose_next_half_bloom_wiggle();
   void randomize_delay();
   void set_forward(bool f);
   void set_target(int32_t tgt);
   void set_target(int32_t tgt, const step_settings_t &ss);
   void trigger_bloom();
+  void trigger_half_bloom();
   void run();
   void dprintf(uint8_t level, const char *format, ...);
   void log();

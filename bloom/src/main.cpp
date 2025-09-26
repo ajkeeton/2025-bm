@@ -57,16 +57,16 @@ void init_steppers() {
 
   ss.pause_ms = 1000;
   ss.accel = 0.00001/2;
-  ss.min_delay = 250;
+  ss.min_delay = 500;
   steppers[0].settings_on_open = ss;
 
   ss.pause_ms = 500;
-  ss.min_delay = 200;
+  ss.min_delay = 350;
   ss.accel = 0.00001/2;
   steppers[1].settings_on_open = ss;
 
   ss.pause_ms = 50;
-  ss.min_delay = 150;
+  ss.min_delay = 250;
   ss.accel = 0.00001/2;
   steppers[2].settings_on_open = ss;
 
@@ -87,6 +87,7 @@ void init_steppers() {
   steppers[0].set_backwards();
   steppers[2].set_backwards();
 #else
+  steppers[0].set_backwards();
   steppers[1].set_backwards();
 
   // Bloom B - The long petals
@@ -110,14 +111,14 @@ void init_steppers() {
   ss.min_delay = 500;
   steppers[1].settings_on_close_slow = ss;
 
-  ss.pause_ms = 1000;
-  ss.accel = 0.00001;
-  ss.min_delay = 250;
+  ss.pause_ms = 750;
+  ss.accel = 0.000005;
+  ss.min_delay = 550;
   steppers[0].settings_on_open = ss;
 
   ss.pause_ms = 500;
-  ss.min_delay = 200;
-  ss.accel = 0.00001;
+  ss.min_delay = 400;
+  ss.accel = 0.000005;
   steppers[1].settings_on_open = ss;
 
   ss.accel = 0.0000015;
@@ -280,11 +281,12 @@ void loop1() {
     digitalWrite(SIGNAL_IN_BLOOM1, LOW);
     digitalWrite(SIGNAL_IN_BLOOM2, LOW);
   }
+
+  log_inputs();
 }
 
 void loop() {
   mux.next();
-  log_inputs();
   //leds.background_update();
   //leds.step();
 }

@@ -4,11 +4,12 @@
 
 #define TIMEOUT_BLOOM 5000 // ms to wait before auto-closing bloom
 #define TIMEOUT_REBLOOM 500 // ms to wait before we rebloom
-#define TIMEOUT_PETALS_OPEN 20000 // Lower petals open. Should be a high number
+#define TIMEOUT_PETALS_OPEN 5000 // Lower petals open. Should be a high number
 
 enum BLOOM_STATE_T {
     BLOOM_INIT,
     BLOOM_WAIT, // Lower petals open, top closed
+    BLOOM_HALF, // Lower petals half open
     BLOOM_FULL, // All open
    //  BLOOM_CLOSE, // All closed
 };
@@ -44,8 +45,11 @@ public:
     void handle_triggers();
     void handle_timeouts();
     
+    bool do_half_bloom(stepper_t &s);
+    void do_half_bloom();
     bool do_bloom(stepper_t &s);
     void do_bloom();
+
     void end_bloom();
 
     void do_wiggle(stepper_t &s, SPEED_T speed);

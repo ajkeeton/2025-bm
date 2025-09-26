@@ -43,6 +43,9 @@ void stepper_t::choose_next() {
       case STEP_BLOOM_WIGGLE:
         choose_next_bloom_wiggle();
         break;
+      case STEP_HALF_BLOOM:
+        choose_next_half_bloom_wiggle();
+        break;
       case STEP_BLOOM:
         #ifdef SWEEP_ONLY
         state = STEP_INIT;
@@ -52,7 +55,7 @@ void stepper_t::choose_next() {
         state = STEP_BLOOM_WIGGLE;
         dprintf(LOG_DEBUG, "%d: Bloom complete, doing wiggle\n", idx);
         // TODO: random wait or wiggle
-        accel.set_pause_ms(1000);
+        accel.set_pause_ms(750);
         choose_next_bloom_wiggle();
         #endif
         break;
@@ -84,6 +87,24 @@ void stepper_t::choose_next_wiggle(int32_t lower, int32_t upper) {
 
   accel.accel_0 = settings_on_wiggle.accel + a;
   Serial.printf( "%d: wiggle next: from %ld to %ld, a: %f\n", idx, position, nxt, a);
+  accel.delay_min = settings_on_wiggle.min_delay + random(100, 300);
+}
+
+void stepper_t::choose_next_half_bloom_wiggle() {
+  state = STEP_HALF_BLOOM;
+
+  uint32_t nxt = random(pos_end * .3, pos_end * .6);
+
+  //Serial.printf( "%d: wiggle next: %d, r: %d, current %d, nxt: %d\n", idx, r, position, nxt);
+  set_target(nxt, settings_on_wiggle);
+  // XXX This has to go after set_target!
+  accel.set_pause_ms(random(150, 750));
+
+  float a = settings_on_wiggle.accel / (random(0, 100)-50);
+
+  accel.accel_0 = settings_on_wiggle.accel + a;
+  Serial.printf( "%d: wiggle next: from %ld to %ld, a: %f\n", idx, position, nxt, a);
+  accel.delay_min = settings_on_wiggle.min_delay + random(100, 300);
 }
 
 void stepper_t::choose_next_sweep() {
@@ -206,6 +227,14 @@ void stepper_t::trigger_bloom() {
   set_target(pos_end, settings_on_open);
 }
 
+void stepper_t::trigger_half_bloom() {
+  if(state == STEP_HALF_BLOOM)
+    return;
+  dprintf(LOG_DEBUG, "%d: Triggering half bloom from state %d\n", idx, state);
+  state = STEP_WIGGLE;
+  set_target(pos_end/2, settings_on_wiggle);
+}
+
 void stepper_t::log() {
   if (debug_level < LOG_DEBUG)
     return;
@@ -221,6 +250,7 @@ void stepper_t::log() {
   switch (state) {
     case STEP_INIT: state_str = "init"; break;
     case STEP_BLOOM: state_str = "bloom"; break;
+    case STEP_HALF_BLOOM: state_str = "half_bloom"; break;
     case STEP_BLOOM_WIGGLE: state_str = "bloom_wiggle"; break;
     case STEP_WIGGLE: state_str = "wiggle"; break;
     case STEP_CLOSE: state_str = "close"; break;

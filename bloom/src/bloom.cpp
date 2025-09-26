@@ -11,10 +11,12 @@ void bloom_t::next() {
     outer->run();
 
     if(log) {
-        Serial.printf("Bloom: State: %d, t last activity: %lums)\n", 
+        uint32_t now = millis();
+        Serial.printf("Bloom: State: %d, t last activity: %lums, last close: %lums\n", 
             state,
-            t_last_activity);
-    }   
+            now - t_last_activity,
+            now - t_last_close);
+    }
 }
 
 void bloom_t::handle_triggers() {
@@ -39,24 +41,19 @@ void bloom_t::handle_triggers() {
             // Ignore triggers during initialization
             lprintf(log, "Triggered during init. Ignored\n");
             break;
+        case BLOOM_HALF:
+            if(pir) {
+                //Serial.printf("PIR triggered startle\n");
+                do_startle();
+            }
+            // Intentional fall-through
         case BLOOM_WAIT:
             // Top does nothing on pir. Blooms on sonar
             // Lower petals should close on pir, open on sonar
-            #ifdef BLOOM_TOP
             if(sonar) {
-                Serial.println("Sonar triggered bloom from BLOOM_WAIT");
-                do_bloom();
-            }
-            #else
-            if(pir) {
-                //Serial.printf("PIR triggered startle from BLOOM_WAIT\n");
-                do_startle();
-            }
-            else {
                 //Serial.printf("Sonar triggered bloom from BLOOM_WAIT\n");
                 do_bloom();
             }
-            #endif
             break;
         case BLOOM_FULL:
             // Already in bloom, do nothing
@@ -88,11 +85,10 @@ void bloom_t::handle_timeouts() {
             #ifndef BLOOM_TOP
             if(now - t_last_close > TIMEOUT_PETALS_OPEN) {
                 if(!t_last_bloom) {
-                    Serial.printf("Lower petals open timeout\n");
+                    Serial.printf("Lower petals half bloom\n");
                 }
 
-                do_bloom();
-                state = BLOOM_WAIT;
+                do_half_bloom();
             }
             #endif
             break;
@@ -107,6 +103,8 @@ void bloom_t::handle_timeouts() {
                //     now - t_last_activity, TIMEOUT_BLOOM);
             }
             break;
+        case BLOOM_HALF:
+            // Occasionally close
         default:
             break;
     }
@@ -190,13 +188,17 @@ void bloom_t::init() {
 
     Serial.println("Initial bloom complete");
 
+    #ifdef BLOOM_TOP
+    do_half_bloom();
+    #else
     end_bloom();
+    #endif
 }
 
 void bloom_t::do_close(stepper_t &s, SPEED_T speed) {
     if(s.disable) return;
-    if(s.state != STEP_BLOOM_WIGGLE && s.state != STEP_BLOOM)
-        return;
+    //if(s.state != STEP_BLOOM_WIGGLE && s.state != STEP_BLOOM)
+    //    return;
 
     t_last_close = millis();
     s.state = STEP_CLOSE;
@@ -232,7 +234,7 @@ void bloom_t::do_bloom() {
     // No instant reblooms
     if(millis() - t_last_close < TIMEOUT_REBLOOM) {
         if(log) 
-            Serial.printf( "Delaying rebloom, just closed %lu ms ago\n", 
+            Serial.printf("Delaying rebloom, just closed %lu ms ago\n", 
                 millis() - t_last_close);
         return;
     }
@@ -251,6 +253,31 @@ void bloom_t::do_bloom() {
     if(!do_bloom(*inner)) return;
 }
 
+bool bloom_t::do_half_bloom(stepper_t &s) {
+    if(s.disable) return true;
+
+    s.trigger_half_bloom();
+
+    return true;
+}
+
+void bloom_t::do_half_bloom() {
+    if(state == BLOOM_FULL || state == BLOOM_HALF)
+        return;
+
+    if(is_blooming() || is_bloomed())
+        return;
+
+    Serial.printf("Doing half bloom from state %d. Inner state: %d\n", 
+            state, inner->state);
+    state = BLOOM_HALF;
+    t_last_close = 0;
+
+    if(!do_half_bloom(*outer)) return;
+    if(!do_half_bloom(*middle)) return;
+    if(!do_half_bloom(*inner)) return;
+}
+
 void bloom_t::end_bloom() {
     if(state != BLOOM_FULL && state != BLOOM_INIT)
         return;
@@ -266,16 +293,18 @@ void bloom_t::end_bloom() {
     do_close(*inner, SPEED_SLOW);
     do_close(*middle, SPEED_SLOW);
     do_close(*outer, SPEED_SLOW);
-    t_last_close = millis();
+
     state = BLOOM_WAIT;
 }
 
 void bloom_t::do_startle() {
     // Lower petals should close, but only if we were waiting
-    if(state != BLOOM_WAIT)
+    if(state != BLOOM_WAIT && state != BLOOM_HALF) 
         return;
 
     uint32_t now = millis();
+    // Serial.printf("Startled from state %d, now - t_last_close = %lu\n", state, now - t_last_close);
+
     if(now - t_last_close < 1000)   
         return;
     t_last_close = now;
@@ -291,6 +320,7 @@ void bloom_t::do_startle() {
 
     t_last_close = millis();
     t_last_bloom = 0;
+
     state = BLOOM_WAIT;
 }
 
