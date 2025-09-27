@@ -13,8 +13,8 @@
 #define PIN_PIR1 10
 #define PIN_PIR2 9
 
-#define PIN_TRIGGER_SONAR 18
-#define PIN_TRIGGER_PIR   19
+#define PIN_TRIGGER_SONAR 19
+#define PIN_TRIGGER_PIR   18
 
 // From motor boards
 #define PIN_IN_BLOOM1 20
@@ -43,8 +43,8 @@ void setup() {
   pinMode(PIN_SONAR2_OUT, OUTPUT);
   digitalWrite(PIN_SONAR2_OUT, LOW);
 
-  pinMode(PIN_SONAR1_IN, INPUT);
-  pinMode(PIN_SONAR2_IN, INPUT);
+  pinMode(PIN_SONAR1_IN, INPUT_PULLDOWN);
+  pinMode(PIN_SONAR2_IN, INPUT_PULLDOWN);
   pinMode(PIN_PIR1, INPUT_PULLDOWN);
   pinMode(PIN_PIR2, INPUT_PULLDOWN);
 
@@ -103,7 +103,7 @@ uint16_t do_sonar(int out_pin, int in_pin, bool log) {
   digitalWrite(out_pin, LOW);
   delayMicroseconds(2);
   digitalWrite(out_pin, HIGH);
-  delayMicroseconds(5);
+  delayMicroseconds(15);
   digitalWrite(out_pin, LOW);
 
   long duration = pulseIn(in_pin, HIGH, 25000); // timeout after 25ms (approx 14ft)
@@ -141,7 +141,7 @@ void loop1() {
   bool log = false;
   static uint32_t last_log = 0;
   uint32_t now = millis();
-  if(now - last_log > 750) {
+  if(now - last_log > 250) {
     last_log = now;
     log = true;
   }
@@ -186,13 +186,13 @@ void loop1() {
   }
   #endif
 
+  log = false;
   bool p1 = do_pir(PIN_PIR1, log);
   bool p2 = do_pir(PIN_PIR2, log);
 
   // Let the motor controllers decide
   if(p1 || p2) {
     digitalWrite(PIN_TRIGGER_PIR, HIGH);
-
   }
   else {
     digitalWrite(PIN_TRIGGER_PIR, LOW);
