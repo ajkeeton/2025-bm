@@ -1,3 +1,4 @@
+#if 0
 #include "leds.h"
 
 DEFINE_GRADIENT_PALETTE( BCY ) {
@@ -214,4 +215,5 @@ void leds_t::trigger(uint16_t pct) {
 
   layer_colored_glow.blur(100);
 }
+#endif
 #endif

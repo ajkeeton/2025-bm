@@ -38,6 +38,10 @@ public:
   //uint32_t step_counts = 0, 
   int32_t steps_to_target = 0;
 
+  // Use a window to constrain accel/decel to part
+  // of the enter movement
+  int32_t window = 0;
+
   ACCEL_STATE state = ACCEL_NEUTRAL;
   
   void init(uint32_t dmin, uint32_t dmax) {
@@ -49,6 +53,23 @@ public:
 
   void set_target(uint32_t midpoint, uint32_t dmax, uint32_t dmin, float a0) {
     accel_0 = a0;
+    delay_current = delay_init = dmax;
+    count = 0;
+    delay_max = dmax; // XXX Refactor -  probably no longer need delay_max
+    delay_min = dmin;
+    steps_to_target = max(1, midpoint);
+    state = ACCEL_UP;
+    time_to_target = t_last_update = t_move_started = 0;
+  }
+
+  float windowed_steps_to_target();
+
+  void set_windowed_target(
+      uint32_t midpoint, uint32_t dmax, uint32_t dmin, float pct) {
+    
+    // XXX for windowing, we use the whole range
+    midpoint *= 2;
+    window = midpoint * pct;
     delay_current = delay_init = dmax;
     count = 0;
     delay_max = dmax; // XXX Refactor -  probably no longer need delay_max
@@ -109,6 +130,8 @@ public:
   int32_t next();
   // Uses a plateau function to acceleration
   int32_t next_plat();
+  // S curve
+  int32_t next_s();
 
 private:
   // Keep the delay between min and max

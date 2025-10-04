@@ -12,7 +12,7 @@ enum LOG_LEVEL {
   LOG_DEBUG,
 };
 
-#define DEFAULT_LOG LOG_DEBUG
+#define DEFAULT_LOG LOG_INFO
 
 #define DEF_SENS_THOLD 800
 

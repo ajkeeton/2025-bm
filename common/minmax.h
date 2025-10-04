@@ -4,9 +4,9 @@
 // It would be nice if this were over time, not total samples, but keeping it 
 // simple for now
 #define N_MOVING_AVG 50
-#define MIN_STD_DEV_FOR_TRIGGER 80 // Used to determine threshold
+#define MIN_STD_DEV_FOR_TRIGGER 70 // Used to determine threshold
 #define T_CALC_STD 1000
-#define MIN_THOLD 80 // Needed for noisy floating pins (even though there's a pulldown)
+#define MIN_THOLD 70 // Needed for noisy floating pins (even though there's a pulldown)
 #define DEF_MIN_MAX_LOG_TIMEOUT 250
 
 #define INIT_TRIG_THOLD 280 
@@ -19,21 +19,23 @@ struct min_max_range_t {
     float 
         avg_min = INIT_TRIG_THOLD, 
         avg_max = INIT_TRIG_MAX,
-        max_max = 0; // MAX_MAX_AVG;
+        max_max = 0;
 
     float window[N_MOVING_AVG];
     uint32_t t_last_update_window = 0;
 
     int widx = 0;
     float
-        pseudo_avg = 0,
+        avg = 0,
         std_dev = 0,
         std_dev_min = 0,
         std_dev_max = 0,
         gradient = 0;
 
     uint32_t last_decay_min = 0,
-             last_decay_max = 0;
+             last_decay_max = 0,
+             min_thold = MIN_THOLD,
+             min_std_to_trigger = MIN_STD_DEV_FOR_TRIGGER;
     log_throttle_t log;
     
     min_max_range_t() {
@@ -54,20 +56,15 @@ struct min_max_range_t {
     }
     
     void init_avg(uint16_t val) {
-        pseudo_avg = 0;
-        for(int i=0; i<N_MOVING_AVG; i++) {
+        for(int i=0; i<N_MOVING_AVG; i++)
             window[i] = val;
-            pseudo_avg += val;
-        }
-        pseudo_avg /= N_MOVING_AVG;
+        update_window(val);
     }
 
     void update(uint16_t val);
     void update_window(uint16_t val);
 
-    uint32_t get_min() const;
-    uint32_t get_max() const;
-    uint32_t get_thold() const;
+    float get_thold() const;
     bool triggered_at(uint16_t val);
     // Slowly close the min/max range
     void decay(); 

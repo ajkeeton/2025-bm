@@ -25,35 +25,35 @@ void init_steppers() {
   steppers[2].init(2, STEP_EN_3, STEP_PULSE_3, STEP_DIR_3, 
                    SENS_LIMIT_3, DELAY_MIN, DELAY_MAX);
 
+  ss.max_delay = 5000;
+  
   ss.pause_ms = 10;
   ss.accel = 0.00001;
   ss.min_delay = 300;
   steppers[0].settings_on_close_fast = ss;
 
-  ss.pause_ms = 500;
+  ss.pause_ms = 100;
   ss.min_delay = 400;
   steppers[1].settings_on_close_fast = ss;
 
-  ss.pause_ms = 1000;
+  ss.pause_ms = 300;
   ss.min_delay = 500;
   ss.accel = 0.00005;
   steppers[2].settings_on_close_fast = ss;
-
 
   ss.pause_ms = 10;
   ss.accel = 0.00001;
   ss.min_delay = 300;
   steppers[0].settings_on_close_slow = ss;
 
-  ss.pause_ms = 500;
+  ss.pause_ms = 250;
   ss.min_delay = 400;
   steppers[1].settings_on_close_slow = ss;
 
-  ss.pause_ms = 1000;
-  ss.min_delay = 500;
+  ss.pause_ms = 500;
+  ss.min_delay = 1000;
   ss.accel = 0.00005;
-  steppers[2].settings_on_close_fast = ss;
-
+  steppers[2].settings_on_close_slow = ss;
 
   ss.pause_ms = 1000;
   ss.accel = 0.00001/2;
@@ -72,9 +72,9 @@ void init_steppers() {
 
   ss.accel = 0.000001;
   ss.pause_ms = 50;
-  ss.min_delay = 400; 
-  ss.max_delay = 20000;
-  ss.min_pos = 0;
+  ss.min_delay = 3000; 
+  ss.max_delay = 15000;
+  ss.min_pos = 100;
   ss.max_pos = DEFAULT_MAX_STEPS * .2;
   steppers[0].settings_on_wiggle = ss;
   steppers[1].settings_on_wiggle = ss;
@@ -87,6 +87,8 @@ void init_steppers() {
   steppers[0].set_backwards();
   steppers[2].set_backwards();
 #else
+  ss.max_delay = 5000;
+
   steppers[0].set_backwards();
   steppers[1].set_backwards();
 
@@ -123,8 +125,8 @@ void init_steppers() {
 
   ss.accel = 0.0000015;
   ss.pause_ms = 50;
-  ss.min_delay = 400; 
-  ss.max_delay = 20000;
+  ss.min_delay = 1000; 
+  ss.max_delay = 10000;
   ss.min_pos = 0;
   ss.max_pos = DEFAULT_MAX_STEPS * .35;
   steppers[0].settings_on_wiggle = ss;
@@ -186,7 +188,7 @@ void setup1() {
 
   Serial.println("Starting...");
 
-  mux.init(8);
+  mux.init(8); 
   init_steppers();
   init_mode();
 
@@ -204,7 +206,6 @@ void setup() {
   pinMode(SIGNAL_IN_BLOOM2, OUTPUT);
   digitalWrite(SIGNAL_IN_BLOOM1, LOW);
   digitalWrite(SIGNAL_IN_BLOOM2, LOW);
-
   // leds.init();
 
   wait_serial();
@@ -253,6 +254,7 @@ void log_inputs() {
 
 void loop1() {
   blink();
+
   // benchmark();
       
   #ifdef SENS_LOG_ONLY
@@ -274,6 +276,7 @@ void loop1() {
 
   bloom.next();
 
+  #ifdef BLOOM_TOP
   if(bloom.is_bloomed()) {
     digitalWrite(SIGNAL_IN_BLOOM1, HIGH);
     digitalWrite(SIGNAL_IN_BLOOM2, HIGH);
@@ -281,12 +284,11 @@ void loop1() {
     digitalWrite(SIGNAL_IN_BLOOM1, LOW);
     digitalWrite(SIGNAL_IN_BLOOM2, LOW);
   }
+  #endif
 
   log_inputs();
 }
 
 void loop() {
   mux.next();
-  //leds.background_update();
-  //leds.step();
 }

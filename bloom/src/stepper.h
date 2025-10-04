@@ -53,6 +53,9 @@ struct step_settings_t {
            max_delay = DELAY_MAX,
            min_pos = 0,
            max_pos = 0;
+  float
+           pos_end_bloom_min = 0.75, // % of pos_end
+           pos_end_bloom_max = .99;
   float accel = 0.000005;
 };
 
@@ -114,6 +117,7 @@ public:
     set_onoff(STEPPER_OFF);
     accel.init(dmin, dmax);
     hall.init(lsl);
+    disable = false;
   }
 
   void set_init() {

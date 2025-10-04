@@ -1,4 +1,5 @@
 #include "stepper.h"
+#include <cmath>
 
 int32_t accel_t::_constrain(int32_t x) {
   x = max(delay_min, x);
@@ -53,6 +54,7 @@ int32_t accel_t::next_plat() {
     // Serial.printf("Decelerating. TTT: %lu\n", time_to_target);
     return delay_current;
   }
+
   float et = 0;
 
   if(count < steps_to_target)
@@ -70,6 +72,97 @@ int32_t accel_t::next_plat() {
   //Serial.printf("Accel @ %d:\t%f: %f .... delay: %u\n", count, et, mult, delay_current);
   //Serial.printf("wtf: %lu - %lu = %lu\n", td, time_to_target, td-time_to_target);
 
+  return delay_current;
+}
+
+float accel_t::windowed_steps_to_target() {
+  if(window) {
+    if(count < window)
+      return window - count;
+    if(count > steps_to_target - window)
+      return count - (steps_to_target - window);
+    // return count so we get a plateau in the middle
+    return count;
+  }
+  return steps_to_target;
+}
+
+#if 0
+int32_t accel_t::next_s() {
+  count++;
+  if (steps_to_target <= 0)
+    return delay_current;
+
+  // normalized progress 0..1 based on full travel
+  float p = (float)count / (float)steps_to_target;
+  if (p < 0.0f) p = 0.0f;
+  if (p > 1.0f) p = 1.0f;
+
+  // mirror progress so we get a bell: 0 at start, 1 at midpoint, 0 at end
+  float t = (p <= 0.5f) ? (p * 2.0f) : ((1.0f - p) * 2.0f);
+
+  // smoothstep / ease in-out on t -> gives smooth bell when mirrored
+  float s = 3.0f * t * t - 2.0f * t * t * t;
+
+  // bias the curve: >1 makes the approach to the ends slower (tune to taste)
+  const float curve = 1.0f; // increase to slow approach more
+  s = powf(s, curve);
+
+  // map s (0..1) to delay: s==0 => delay_max (slow), s==1 => delay_min (fast)
+  int32_t target = delay_max - (int32_t)(s * (float)(delay_max - delay_min));
+  delay_current = _constrain(target);
+
+  return delay_current;
+}
+#endif
+
+int32_t accel_t::next_s() {
+  count++;
+  if (steps_to_target <= 0)
+    return delay_current;
+
+  float s = 0.0f;
+  const float edge_steep = 0.5f; // <1 -> steeper edges (lower => steeper)
+
+  // If a "window" is configured, use it to produce a true flat plateau
+  // in the center (full speed). The ramps on either end use smoothstep.
+  if (window > 0 && steps_to_target > 2 * window) {
+    if (count >= window && count <= steps_to_target - window) {
+      // center plateau
+      s = 1.0f;
+    } else {
+      // ramp region length == window
+      float t;
+      if (count < window)
+        t = (float)count / (float)window;
+      else
+        t = (float)(steps_to_target - count) / (float)window;
+      if (t < 0.0f) t = 0.0f;
+      if (t > 1.0f) t = 1.0f;
+      // steepen edges by remapping t before smoothstep
+      t = powf(t, edge_steep);
+      // smoothstep ramp
+      s = 3.0f * t * t - 2.0f * t * t * t;
+    }
+  } else {
+    // No explicit window: mirror progress to make a bell shape
+    float p = (float)count / (float)steps_to_target;
+    if (p < 0.0f) p = 0.0f;
+    if (p > 1.0f) p = 1.0f;
+    float t = (p <= 0.5f) ? (p * 2.0f) : ((1.0f - p) * 2.0f);
+    // steepen ramp edges
+    t = powf(t, edge_steep);
+    s = 3.0f * t * t - 2.0f * t * t * t;
+  }
+
+  // Additional flattening transform: raises center values toward 1
+  // Increase flatness (>1.0) to widen/flatten the plateau.
+  const float flatness = 1.0f;
+  s = 1.0f - powf(1.0f - s, flatness);
+
+  // Map s (0..1) to delay range: 0 -> delay_max (slow), 1 -> delay_min (fast)
+  int32_t target = delay_max - (int32_t)(s * (float)(delay_max - delay_min));
+  delay_current = _constrain(target);
   return delay_current;
 }
 

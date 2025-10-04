@@ -1,3 +1,5 @@
+#ifdef USE_WIFI
+
 #include "common.h"
 #include "wifi.h"
 #include "proto.h"
@@ -314,3 +316,4 @@ void wifi_t::log_info() {
     WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str(), 
     gardener, client.connected());
 }
+#endif

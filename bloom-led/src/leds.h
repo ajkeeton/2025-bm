@@ -1,4 +1,5 @@
 #pragma once
+#if 0
 #include "common.h"
 #include "common/patterns.h"
 #include <FastLED.h>
@@ -82,3 +83,4 @@ private:
     uint32_t trigger_time = 0;
     bool triggered = false;
 };
+#endif

@@ -70,67 +70,6 @@ int32_t accel_t::next_plat() {
 
   delay_current = _constrain(delay_max - mult * delay_max);
   //Serial.printf("Accel @ %d:\t%f: %f .... delay: %u\n", count, et, mult, delay_current);
-  //Serial.printf("wtf: %lu - %lu = %lu\n", td, time_to_target, td-time_to_target);
 
   return delay_current;
 }
-
-#if 0
-int32_t accel_t::next() {
-  // Speed is in pulses/sec
-  // Accel val is in pulses/sec**2
-  // Use t_move_start to figure out what I current speed should be 
-  // Convert pulse/sec back to delay
-  
-  uint32_t now = micros();
-  float lapsed = now - t_move_started;
-
-  // we're in micros, so make lapsed more manageable
-  lapsed /= ACCEL_CONST_DIV;
-
-  // desired speed in pulse/sec
-  float d = lapsed / accel_0 + lapsed*lapsed / accel_1;
-
-  Serial.printf("Accel: %f + %f = %f ... ", lapsed / accel_0, lapsed*lapsed / accel_1, d);
-
-  if(state == ACCEL_UP) {
-    d = -d;
-
-  uint32_t ret = max(delay_min, delay_current + d);
-  ret = min(delay_max, ret);
-  Serial.printf("delay current: %u, returning: %u\n", delay_current, ret);
-  return ret;
-}
-#endif
-
-#if 0
-int32_t accel_t::next() {
-  #if 0
-  if(step_counts == step_target)
-    return delay_current + step_counts * step_size;
-
-  step_counts++;
-
-  //Serial.printf("Accel: %d * %f = %f ... delay current: %u tgt: %u\n ", 
-  //  step_counts, step_size, step_counts * step_size, delay_current, step_target);
-
-  return delay_current + step_counts * step_size;
-  #endif
-  
-  // NOTE: intentionally doing the calc even when we pass the target point then clamping
-  // simplifies some things with minimal performance impact
-
-  step_counts++;
-
-  int32_t ret = delay_current + step_counts * step_size;
-  if(ret < 0 || ret < delay_min)  // the < 0 is due to wrap around and comparing int vs uint
-    ret = delay_min;
-  if(ret > delay_max)
-    ret = delay_max;
-
-  //Serial.printf("Accel: %d * %f = %f ... delay current: %u tgt: %u. ret: %ld\n ", 
-  //  step_counts, step_size, step_counts * step_size, delay_current, step_target, ret);
-
-  return ret;
-}
-#endif

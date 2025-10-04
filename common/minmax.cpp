@@ -1,7 +1,7 @@
 #include "common.h"
 #include "minmax.h"
 
-uint32_t min_max_range_t::get_thold() const {
+float min_max_range_t::get_thold() const {
   //return avg_min + (avg_max - avg_min) * .25;
   //if(std_dev < MIN_STD_DEV_FOR_TRIGGER)
     //return (avg_max - avg_min) + MIN_STD_DEV_FOR_TRIGGER;
@@ -14,22 +14,26 @@ uint32_t min_max_range_t::get_thold() const {
   return pseudo_avg + std_dev;
   #endif
 
-  uint32_t thold = avg_min + (avg_max - avg_min) * .075;
-  return thold < MIN_THOLD ? MIN_THOLD : thold;
+  //uint32_t thold = avg_min + (avg_max - avg_min) * .075;
+  //return thold < min_thold ? min_thold : thold;
+  
+  float sd = std_dev;
+  if(sd < min_std_to_trigger)
+    sd = min_std_to_trigger;
+    
+  return avg - sd*2;
 }
 
 bool min_max_range_t::triggered_at(uint16_t val) {
   float sd = std_dev;
-  if(sd < MIN_STD_DEV_FOR_TRIGGER)
-    sd = MIN_STD_DEV_FOR_TRIGGER;
+  if(sd < min_std_to_trigger)
+    sd = min_std_to_trigger;
     
-  // check if we're above or below the average by 1.5 std dev
-  if(val > pseudo_avg + sd*2)
-    // Triggered
+  // Initially gets brighter from the reflection
+  if(val > avg + sd*1.5)
     return true;
   
-  // sd * 4 to make us less sensitive to drops in values
-  if(val < pseudo_avg - sd*4)
+  if(val < avg - sd*2)
     return true;
     
   return false;
@@ -43,16 +47,16 @@ void min_max_range_t::update_window(uint16_t val) {
   if(widx >= N_MOVING_AVG)
     widx = 0;
   
-  pseudo_avg = 0;
+  avg = 0;
   for(int i=0; i<N_MOVING_AVG; i++) {
-    pseudo_avg += window[i];
+    avg += window[i];
   }
 
-  pseudo_avg /= N_MOVING_AVG;
+  avg /= N_MOVING_AVG;
   float variance = 0;
   // Calc variance
   for(int i=0; i<N_MOVING_AVG; i++) {
-    float diff = window[i] - pseudo_avg;
+    float diff = window[i] - avg;
     variance += diff * diff;
   }
   variance /= N_MOVING_AVG;
@@ -73,6 +77,7 @@ void min_max_range_t::update(uint16_t val) {
     update_window(val);
   }
 
+  #if 0
   float new_min_avg = avg_min, 
           new_max_avg = avg_max;
 
@@ -124,13 +129,13 @@ void min_max_range_t::update(uint16_t val) {
 
   avg_min = new_min_avg;
   avg_max = new_max_avg;
+  #endif
 }
 
 void min_max_range_t::log_info() {
   if(!log.should_log())
     return;
 
-  Serial.printf("Avg: %.3f | Std dev: %.3f "
-      "| Min Avg: %.3f | Max Avg: %.3f | Thold: %lu\n", 
-      pseudo_avg, std_dev, avg_min, avg_max, get_thold());
+  Serial.printf("Avg: %.3f | Std dev: %.3f | Thold: %f\n", 
+      avg, std_dev, get_thold());
 }

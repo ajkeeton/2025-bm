@@ -3,7 +3,7 @@
 #include <Wire.h>
 #include <stdint.h>
 
-#define BLOOM_TOP
+//#define BLOOM_TOP
 
 //#define SENS_LOG_ONLY
 //#define OPEN_CLOSE_ONLY
@@ -31,11 +31,10 @@ enum LOG_LEVEL {
 #define STEP_PULSE_3 9
 #define STEP_DIR_3 10
 
-/*
 #define STEP_EN_4 11
 #define STEP_PULSE_4 12
 #define STEP_DIR_4 13
-*/
+
 #define SIGNAL_IN_BLOOM1 13
 #define SIGNAL_IN_BLOOM2 12
 

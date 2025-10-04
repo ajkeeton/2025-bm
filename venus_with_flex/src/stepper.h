@@ -121,7 +121,7 @@ public:
 
   void do_init() {
     state = STEP_INIT;
-    set_target(-DEFAULT_MAX_STEPS, settings_on_open);
+    set_target(-DEFAULT_MAX_STEPS*2, settings_on_open);
   }
 
   void set_backwards() {

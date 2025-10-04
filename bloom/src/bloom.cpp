@@ -10,6 +10,8 @@ void bloom_t::next() {
     middle->run();
     outer->run();
 
+    stamen.next();
+
     if(log) {
         uint32_t now = millis();
         Serial.printf("Bloom: State: %d, t last activity: %lums, last close: %lums\n", 
@@ -99,8 +101,8 @@ void bloom_t::handle_timeouts() {
                 state = BLOOM_WAIT;
             } 
             else {
-               // Serial.printf("Bloom active. Not timing out (%lums < %lums)\n", 
-               //     now - t_last_activity, TIMEOUT_BLOOM);
+               //Serial.printf("Bloom active. Not timing out (%lums - %lums > %lums)\n", 
+               //     now, t_last_activity, TIMEOUT_BLOOM);
             }
             break;
         case BLOOM_HALF:
@@ -145,10 +147,13 @@ bool bloom_t::is_bloomed() {
 }
 
 void bloom_t::init() {
+    t_last_activity = millis();
+
     // Home each petal, in sequence
     init_stepper(*outer);
     init_stepper(*middle);
     init_stepper(*inner);
+    stamen.init();
 
     #ifdef BLOOM_TOP
     while(inner->state == STEP_INIT) { 
@@ -167,19 +172,22 @@ void bloom_t::init() {
     }
     
     #else
-    while(in_init()) {
+    
+    while(in_init() || stamen.step.state == STEP_INIT) {
+        stamen.next();
         outer->run();
         middle->run();
         inner->run();
         blink();
     }
     #endif
-
+    
     Serial.println("Close complete. Doing initial bloom");
 
     do_bloom();
 
     while(is_blooming()) {
+        stamen.next();
         outer->run();
         middle->run();
         inner->run();
@@ -248,6 +256,8 @@ void bloom_t::do_bloom() {
     t_last_close = 0;
     state = BLOOM_FULL;
 
+    stamen.do_bloom();
+
     if(!do_bloom(*outer)) return;
     if(!do_bloom(*middle)) return;
     if(!do_bloom(*inner)) return;
@@ -293,6 +303,8 @@ void bloom_t::end_bloom() {
     do_close(*inner, SPEED_SLOW);
     do_close(*middle, SPEED_SLOW);
     do_close(*outer, SPEED_SLOW);
+
+    stamen.do_close();
 
     state = BLOOM_WAIT;
 }

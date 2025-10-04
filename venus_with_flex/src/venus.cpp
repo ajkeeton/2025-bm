@@ -13,6 +13,7 @@ mux_t mux;
 // wifi_t wifi;
 leds_t leds;
 hall_t hall;
+debounce_t debounce;
 
 min_max_range_t minmax(100, 1000); // Default min/max for the sensors
 
@@ -32,39 +33,39 @@ void init_steppers() {
 
   ss.pause_ms = 10;
   ss.accel = 0.0001;
-  ss.min_delay = 20;
+  ss.min_delay = 90;
   steppers[0].settings_on_close = ss;
 
   ss.pause_ms = 250;
-  ss.min_delay = 80;
+  ss.min_delay = 90;
   steppers[1].settings_on_close = ss;
 
   ss.pause_ms = 500;
-  ss.min_delay = 80;
+  ss.min_delay = 90;
   ss.accel = 0.00005;
   steppers[2].settings_on_close = ss;
 
-  ss.pause_ms = 1000;
-  ss.accel = 0.00003;
-  ss.min_delay = 80;
+  ss.pause_ms = 750;
+  ss.accel = 0.00002;
+  ss.min_delay = 120;
   steppers[0].settings_on_open = ss;
 
-  ss.pause_ms = 500;
-  ss.min_delay = 80;
-  ss.accel = 0.00003;
+  ss.pause_ms = 400;
+  ss.min_delay = 120;
+  ss.accel = 0.00002;
   steppers[1].settings_on_open = ss;
 
   ss.pause_ms = 50;
-  ss.min_delay = 80;
-  ss.accel = 0.00003;
+  ss.min_delay = 120;
+  ss.accel = 0.00002;
   steppers[2].settings_on_open = ss;
 
   ss.accel = 0.00001;
   ss.pause_ms = 50;
-  ss.min_delay = 200;
+  ss.min_delay = 2000;
   ss.max_delay = 20000;
-  ss.min_pos = DEFAULT_MAX_STEPS * .15;
-  ss.max_pos = DEFAULT_MAX_STEPS * .6; 
+  ss.min_pos = DEFAULT_MAX_STEPS * .05;
+  ss.max_pos = DEFAULT_MAX_STEPS * .5; 
 
   steppers[0].settings_on_wiggle = ss;
   steppers[1].settings_on_wiggle = ss;
@@ -137,9 +138,13 @@ void init_mode() {
 void setup1() {
   while(!setup0_done) { yield(); }
 
-  Serial.begin(9600);
-  wait_serial();
+  Serial.println("Setup1...");
 
+  //mux.num_inputs = 6;
+  Serial.println("Running...");
+}
+
+void setup() {
   pinMode(STEP_PULSE_1, OUTPUT);
   pinMode(STEP_PULSE_2, OUTPUT);
   pinMode(STEP_PULSE_3, OUTPUT);
@@ -158,28 +163,29 @@ void setup1() {
   pinMode(STEP_EN_4, OUTPUT);
 #endif
 
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
-
-  Serial.println("Starting...");
-
-  //mux.num_inputs = 6;
-  init_steppers();
-  init_mode();
-
-  minmax.init_avg(mux.read_raw(SENS_PROX_1));
-}
-
-void setup() {
-  mux.init();
-  leds.init();
-
-  wait_serial();
-
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
   pinMode(A2, INPUT);
 
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+  
+  wait_serial();
+
+  mux.init();
+  init_steppers();
+ 
+  int sens = mux.read_raw(SENS_PROX_1);
+  if(analogRead(INPUT_SWITCH_0) < 100) {
+      use_tof = true;
+    sens = constrain(map(sens, SENS_TOF_MIN, SENS_TOF_MAX, 30, 4), 4, 30);
+    minmax.min_thold = 4;
+    minmax.min_std_to_trigger = 4;
+  }
+  minmax.init_avg(sens);
+  leds.init();
+  init_mode();
+  
   //wifi.init("venus");
   Serial.print("Chip ID: "); Serial.println(rp2040.getChipID());
 
@@ -202,7 +208,7 @@ void benchmark() {
     // Poor-mans moving average
     avg = (avg * 4 + diff)/5;
 
-  // NOTE: This will skew the measurement for the next iteration
+  // NOTE: this will skew the measurement for the next iteration
   // Need extra work to keep accurate, but that's a pretty low priority
   if(now - last_output < 2000)
     return;
@@ -215,7 +221,7 @@ void log_inputs() {
   static uint32_t last = 0;
   uint32_t now = millis();
 
-  if(now - last < 750)
+  if(now - last < 250)
     return;
   last = now;
 
@@ -224,7 +230,7 @@ void log_inputs() {
   if(use_tof) {
     uint16_t tof = constrain(map(mux.read_raw(SENS_TOF_PIN), SENS_TOF_MIN, SENS_TOF_MAX, 30, 4), 4, 30);
     // To inches
-    Serial.printf("ToF: %d, %.3f in\n", mux.read_raw(SENS_TOF_PIN), (float)tof*0.393701);
+    Serial.printf("ToF: %d, %.3f in\n", tof, (float)tof*0.393701);
   }
 }
 
@@ -241,17 +247,27 @@ void loop1() {
   // TODO: handle sensor override button 
   uint32_t sens = mux.read_raw(SENS_PROX_1);
 
+  if(use_tof)
+    sens = constrain(map(sens, SENS_TOF_MIN, SENS_TOF_MAX, 30, 4), 4, 30);
+  
   minmax.update(sens);
-  // Serial.printf("Sensor: %d, Min: %d, Max: %d\n", sens, minmax.avg_min, minmax.avg_max);
-  //minmax.log_info();
+  //Serial.printf("Sensor: %lu\n", sens);
+  minmax.log_info(); 
 
-  static uint32_t last = 0;
+  static uint32_t last_trigger = 0;
   uint32_t now = millis();
+  bool triggered = false;
+  if(use_tof) {
+    triggered = debounce.update(sens < 11);
+  }
+  else {
+    triggered = minmax.triggered_at(sens);
+  }
 
-  if(minmax.triggered_at(sens)) {
-      if(now > last + 500) {
-        last = now;
-        Serial.printf("Triggered: %ld (%.2f std: %.2f)\n", sens, minmax.pseudo_avg, minmax.std_dev);
+  if(triggered) {
+      if(now > last_trigger + 1500) {
+        last_trigger = now;
+        Serial.printf("Triggered: %ld (%.2f std: %.2f)\n", sens, minmax.avg, minmax.std_dev);
       }
 
       for(int i=0; i<NUM_STEPPERS; i++) {
@@ -264,8 +280,11 @@ void loop1() {
 }
 
 void loop() {
+  //Serial.println("mux.next...");
   mux.next();
-  // Move cores?
+  //Serial.println("mux.next done...");
+
+  // LEDs should be on core 0!
   leds.background_update();
   leds.step();
 }

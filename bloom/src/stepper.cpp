@@ -65,7 +65,8 @@ void stepper_t::choose_next() {
 }
 
 void stepper_t::choose_next_bloom_wiggle() {
-  choose_next_wiggle(pos_end*.8, pos_end*.99);
+  choose_next_wiggle(
+    pos_end * settings_on_wiggle.pos_end_bloom_min, pos_end * settings_on_wiggle.pos_end_bloom_max);
   state = STEP_BLOOM_WIGGLE;
 }
 
@@ -83,11 +84,10 @@ void stepper_t::choose_next_wiggle(int32_t lower, int32_t upper) {
   // XXX This has to go after set_target!
   accel.set_pause_ms(random(150, 750));
 
-  float a = settings_on_wiggle.accel / (random(0, 100)-50);
-
-  accel.accel_0 = settings_on_wiggle.accel + a;
-  Serial.printf( "%d: wiggle next: from %ld to %ld, a: %f\n", idx, position, nxt, a);
-  accel.delay_min = settings_on_wiggle.min_delay + random(100, 300);
+  // float a = 0; // settings_on_wiggle.accel / (random(0, 100)-50);
+  // accel.accel_0 = settings_on_wiggle.accel + a;
+  Serial.printf( "%d: wiggle next: from %ld to %ld\n", idx, position, nxt);
+  //accel.delay_min = settings_on_wiggle.min_delay + random(100, 300);
 }
 
 void stepper_t::choose_next_half_bloom_wiggle() {
@@ -100,11 +100,10 @@ void stepper_t::choose_next_half_bloom_wiggle() {
   // XXX This has to go after set_target!
   accel.set_pause_ms(random(150, 750));
 
-  float a = settings_on_wiggle.accel / (random(0, 100)-50);
-
-  accel.accel_0 = settings_on_wiggle.accel + a;
-  Serial.printf( "%d: wiggle next: from %ld to %ld, a: %f\n", idx, position, nxt, a);
-  accel.delay_min = settings_on_wiggle.min_delay + random(100, 300);
+  //float a = 0;//  settings_on_wiggle.accel / (random(0, 100)-50);
+  //accel.accel_0 = settings_on_wiggle.accel + a;
+  Serial.printf( "%d: wiggle next: from %ld to %ld\n", idx, position, nxt);
+  //accel.delay_min = settings_on_wiggle.min_delay + random(100, 300);
 }
 
 void stepper_t::choose_next_sweep() {
@@ -151,7 +150,8 @@ void stepper_t::set_target(int32_t tgt, const step_settings_t &ss) {
   uint32_t maxd = ss.max_delay,
            mind = ss.min_delay;
 
-  accel.set_target(steps_to_mid_point, maxd, mind, ss.accel);
+  //accel.set_target(steps_to_mid_point, maxd, mind, ss.accel);
+  accel.set_windowed_target(steps_to_mid_point, maxd, mind, 0.35);
 
   if (pos_tgt > position) {
     set_forward(true);
@@ -208,7 +208,7 @@ void stepper_t::run() {
 
     digitalWrite(pin_step, step_pin_val);
     step_pin_val = !step_pin_val;
-    accel.next_plat();
+    accel.next_s();
   }
 
   //if(!(position % 100) || position == pos_tgt)
@@ -240,7 +240,7 @@ void stepper_t::log() {
     return;
   uint32_t now = millis();
 
-  if(now - last_log < 1000)
+  if(now - last_log < 500)
     return;
 
   uint32_t us = micros();
@@ -259,6 +259,7 @@ void stepper_t::log() {
     default: state_str = "unknown"; break;
   }
 
+  #if 0
   dprintf(LOG_DEBUG, "%d: Position: %ld, Target: %ld, State: %s, Fwd/Back: %d, "
       "Accel Delay: %ld, A0: %f, is ready: %d !(%lu && %lu)\n",
     idx, position, pos_tgt == -INT_MAX ? -99999 : pos_tgt,
@@ -266,5 +267,14 @@ void stepper_t::log() {
     accel.delay_current, accel.accel_0, accel.is_ready(),
     us - accel.t_last_update < accel.t_pause_for,
     us - accel.t_last_update < accel.delay_current);
-  
+  #endif
+    dprintf(LOG_DEBUG, "%d: Position: %ld, Target: %ld, State: %s, Fwd/Back: %d, "
+      "Accel Delay: %ld, Window: %ld, Steps to target: %f, is ready: %d !(%lu && %lu)\n",
+    idx, position, pos_tgt == -INT_MAX ? -99999 : pos_tgt,
+    state_str, forward, 
+    accel.delay_current,
+    accel.window,
+    accel.windowed_steps_to_target(), accel.is_ready(),
+    us - accel.t_last_update < accel.t_pause_for,
+    us - accel.t_last_update < accel.delay_current);
 }

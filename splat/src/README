@@ -1,0 +1,19 @@
+
+Latest is organized instead of having strips:
+
+Old version roughly organized as:
+
+- []strips
+-- sensors
+--- mux
+- Meta state
+
+New version organized as:
+
+- Wads
+-- Global state
+-- []Strips
+-- Sensors
+---- Mux
+---- []Sensor meta data / mappings
+- Wifi

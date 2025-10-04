@@ -29,7 +29,7 @@ void stepper_t::choose_next(STEP_STATE next) {
         state_next = STEP_CLOSE;
 
       dprintf(LOG_DEBUG, "%d: Initializing\n", idx);
-      set_target(-DEFAULT_MAX_STEPS);
+      set_target(-DEFAULT_MAX_STEPS*4);
 
       // Override max speed to avoid slamming into the limit
       accel.delay_min = max(accel.delay_min, 200);
@@ -62,7 +62,7 @@ void stepper_t::choose_next(STEP_STATE next) {
       dprintf(LOG_DEBUG, "%d: Doing close\n", idx);
       break;
     case STEP_OPEN:
-      set_target(-DEFAULT_MAX_STEPS, settings_on_open);  // Force us to find the lower limit
+      set_target(-DEFAULT_MAX_STEPS*.01, settings_on_open);  // Force us to find the lower limit
       accel.set_pause_ms(250);
       dprintf(LOG_DEBUG, "%d: Doing open\n", idx);
       #ifdef OPEN_CLOSE_ONLY
@@ -129,9 +129,9 @@ void stepper_t::choose_next_wiggle(int32_t lower, int32_t upper) {
 
   set_target(nxt, settings_on_wiggle);
   accel.set_pause_ms(random(150, 750));
-  float a = settings_on_wiggle.accel / (random(0, 100)-50);
+  float a = settings_on_wiggle.accel / (random(50, 100));
   accel.accel_0 = settings_on_wiggle.accel + a;
-
+  accel.delay_min = settings_on_wiggle.min_delay + random(0, 400);
   // Override the acceleration settings
   //accel.set_target(accel.steps_to_target, 
   //  settings_on_wiggle.min_delay + random(0, 200), 
@@ -247,7 +247,7 @@ void stepper_t::trigger_close() {
       return;
   }
 
-  how_wiggly = random(2, 4);
+  how_wiggly = 2; // random(1, 3);
   choose_next(STEP_TRIGGERED_INIT);
 }
 

@@ -1,4 +1,7 @@
 #pragma once
+
+#ifdef USE_WIFI
+
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <FreeRTOS.h>
@@ -141,3 +144,5 @@ private:
         mutex_exit(&mtx);
     }
 };
+
+#endif
